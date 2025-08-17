@@ -69,7 +69,8 @@ from ultralytics.nn.modules import (
     HyperACE,
     DownsampleConv,
     FullPAD_Tunnel,
-    DSC3k2
+    DSC3k2,
+    DINO2Backbone
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -1095,6 +1096,15 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 c2 =c1
         elif m is FullPAD_Tunnel:
             c2 = ch[f[0]]
+        elif m is DINO2Backbone:
+            # Handle DINO2Backbone: [model_name, freeze_backbone, output_channels]
+            c1 = ch[f]  # Input channels
+            if len(args) >= 3 and isinstance(args[2], int):
+                c2 = args[2]  # Specified output channels
+            else:
+                c2 = c1  # Match input channels if not specified
+            # Keep original arguments for DINO2Backbone initialization
+            args = [*args]
         else:
             c2 = ch[f]
 

@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+from transformers import Dinov2Model, Dinov2Config
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
 from .conv import Conv, DSConv, DWConv, GhostConv, LightConv, RepConv, autopad
@@ -53,7 +54,8 @@ __all__ = (
     "HyperACE", 
     "DownsampleConv", 
     "FullPAD_Tunnel",
-    "DSC3k2"
+    "DSC3k2",
+    "DINO2Backbone"
 )
 
 
@@ -1914,3 +1916,244 @@ class FullPAD_Tunnel(nn.Module):
     def forward(self, x):
         out = x[0] + self.gate * x[1]
         return out
+
+
+class DINO2Backbone(nn.Module):
+    """
+    DINO2 backbone for YOLOv13 with pretrained Vision Transformer features.
+    
+    This class integrates Meta's DINO2 (DINOv2) pretrained model as a backbone 
+    for YOLOv13, providing powerful feature extraction capabilities with the
+    option to freeze pretrained weights during training.
+    
+    Args:
+        model_name (str): DINO2 model variant ('dinov2_vits14', 'dinov2_vitb14', 
+                         'dinov2_vitl14', 'dinov2_vitg14')
+        freeze_backbone (bool): Whether to freeze DINO2 weights during training
+        output_channels (list): List of output channel dimensions for multi-scale features
+        
+    Attributes:
+        dino_model: Pretrained DINO2 model
+        freeze_backbone: Flag to control weight freezing
+        feature_adapters: Projection layers to match YOLOv13 channel dimensions
+        
+    Examples:
+        >>> backbone = DINO2Backbone('dinov2_vitb14', freeze_backbone=True)
+        >>> x = torch.randn(2, 3, 224, 224)
+        >>> features = backbone(x)
+        >>> print([f.shape for f in features])
+    """
+    
+    def __init__(self, model_name='dinov2_vitb14', freeze_backbone=True, 
+                 output_channels=None, input_channels=None):
+        super().__init__()
+        
+        self.model_name = model_name
+        self.freeze_backbone = freeze_backbone
+        self.input_channels = input_channels  # Will be set dynamically
+        
+        # Handle output channels - if not specified, will match input channels
+        if output_channels is None:
+            self.output_channels = None  # Will be set to match input channels
+        elif isinstance(output_channels, list):
+            self.output_channels = output_channels[0]
+        else:
+            self.output_channels = output_channels
+        
+        # Map model names to correct Hugging Face identifiers
+        model_mapping = {
+            'dinov2_vits14': 'facebook/dinov2-small',
+            'dinov2_vitb14': 'facebook/dinov2-base', 
+            'dinov2_vitl14': 'facebook/dinov2-large',
+            'dinov2_vitg14': 'facebook/dinov2-giant'
+        }
+        
+        # Load pretrained DINO2 model with correct identifier
+        hf_model_name = model_mapping.get(model_name, 'facebook/dinov2-base')
+        try:
+            print(f"Loading DINO2 model: {hf_model_name} (from {model_name})")
+            self.dino_model = Dinov2Model.from_pretrained(hf_model_name)
+            print(f"✅ Successfully loaded pretrained DINO2: {hf_model_name}")
+        except Exception as e:
+            print(f"❌ Failed to load {hf_model_name}: {e}")
+            print(f"Using random initialization for DINO2 backbone")
+            config = Dinov2Config()
+            self.dino_model = Dinov2Model(config)
+        
+        # Get DINO2 model dimensions
+        self.embed_dim = self.dino_model.config.hidden_size
+        self.patch_size = self.dino_model.config.patch_size
+        
+        # Freeze DINO2 weights if requested
+        if self.freeze_backbone:
+            for param in self.dino_model.parameters():
+                param.requires_grad = False
+            print(f"DINO2 backbone weights frozen: {model_name}")
+        
+        # Projection layers will be created dynamically on first forward pass
+        self.input_projection = None
+        self.fusion_layer = None
+        
+        # Feature adaptation layers will be created dynamically
+        # when we know the actual input and desired output dimensions
+        self.feature_adapter = None
+        self.spatial_projection = None
+        
+    def extract_features(self, features, input_size):
+        """
+        Extract features from DINO2 patch features and maintain spatial dimensions.
+        
+        Args:
+            features: DINO2 patch features [B, N_patches+1, embed_dim] (includes CLS token)
+            input_size: Input spatial size (H, W)
+            
+        Returns:
+            Single feature map maintaining spatial structure
+        """
+        B, N_total, D = features.shape
+        H, W = input_size
+        
+        # Remove CLS token (first token) and keep only patch tokens
+        patch_features = features[:, 1:, :]  # [B, N_patches, embed_dim]
+        N_patches = patch_features.shape[1]
+        
+        # Calculate patch grid dimensions
+        patch_h = int(N_patches**0.5)  # Assuming square patches
+        patch_w = patch_h
+        
+        # Ensure we have the right number of patches
+        if patch_h * patch_w != N_patches:
+            # Handle non-square cases by taking closest square root
+            patch_h = patch_w = int(N_patches**0.5)
+            # Trim or pad if necessary
+            if patch_h * patch_w > N_patches:
+                patch_h = patch_w = patch_h - 1
+            patch_features = patch_features[:, :patch_h*patch_w, :]
+        
+        # Reshape to spatial feature map
+        features_2d = patch_features.view(B, patch_h, patch_w, D)
+        features_2d = features_2d.permute(0, 3, 1, 2)  # [B, D, H, W]
+        
+        # Adapt channel dimensions
+        adapted_features = features_2d.permute(0, 2, 3, 1)  # [B, H, W, D]
+        adapted_features = self.feature_adapter(adapted_features)  # [B, H, W, target_channels]
+        adapted_features = adapted_features.permute(0, 3, 1, 2)  # [B, target_channels, H, W]
+        
+        # Apply spatial projection
+        adapted_features = self.spatial_projection(adapted_features)
+        
+        return adapted_features
+    
+    def _create_projection_layers(self, input_channels):
+        """Create projection layers based on actual input channels."""
+        # If output channels not specified, match input channels
+        if self.output_channels is None:
+            self.output_channels = input_channels
+            
+        target_channels = self.output_channels
+        
+        # Input projection to convert CNN features to RGB-like input for DINO2
+        self.input_projection = nn.Sequential(
+            nn.Conv2d(input_channels, 64, 3, 1, 1),  # Reduce channels first
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 3, 1, 1),  # Project to 3 channels (RGB-like)
+            nn.Tanh()  # Normalize to [-1, 1] range
+        )
+        
+        # Fusion layer to combine original features with DINO2 features
+        self.fusion_layer = nn.Sequential(
+            nn.Conv2d(input_channels + target_channels, target_channels, 3, 1, 1),
+            nn.BatchNorm2d(target_channels),
+            nn.ReLU(inplace=True)
+        )
+        
+        # Create the feature adapter and spatial projection
+        self.feature_adapter = nn.Sequential(
+            nn.Linear(self.embed_dim, target_channels),
+            nn.LayerNorm(target_channels),
+            nn.GELU()
+        )
+        
+        self.spatial_projection = nn.Sequential(
+            nn.Conv2d(target_channels, target_channels, 3, 1, 1),
+            nn.BatchNorm2d(target_channels),
+            nn.ReLU(inplace=True)
+        )
+        
+        # Move to same device as main model
+        if hasattr(self.dino_model, 'device'):
+            self.input_projection = self.input_projection.to(self.dino_model.device)
+            self.fusion_layer = self.fusion_layer.to(self.dino_model.device)
+            self.feature_adapter = self.feature_adapter.to(self.dino_model.device)
+            self.spatial_projection = self.spatial_projection.to(self.dino_model.device)
+
+    def forward(self, x):
+        """
+        Forward pass through DINO2 backbone.
+        
+        Args:
+            x: Input tensor [B, C, H, W] - CNN features
+            
+        Returns:
+            Enhanced feature map with DINO2 features [B, target_channels, H, W]
+        """
+        B, C, H, W = x.shape
+        
+        # Create projection layers if this is the first forward pass
+        if self.input_projection is None:
+            self.input_channels = C
+            self._create_projection_layers(C)
+        
+        # Project CNN features to RGB-like representation for DINO2
+        pseudo_rgb = self.input_projection(x)  # [B, 3, H, W]
+        
+        # Resize to DINO2 expected size (224x224 or 518x518)
+        dino_size = 224  # DINO2 default size
+        pseudo_rgb_resized = F.interpolate(pseudo_rgb, size=(dino_size, dino_size), 
+                                         mode='bilinear', align_corners=False)
+        
+        # Forward through DINO2
+        with torch.set_grad_enabled(not self.freeze_backbone):
+            outputs = self.dino_model(pseudo_rgb_resized)
+            features = outputs.last_hidden_state  # [B, N_patches, embed_dim]
+        
+        # Extract features maintaining spatial structure
+        dino_features = self.extract_features(features, (dino_size, dino_size))
+        
+        # Resize DINO2 features back to original spatial size
+        dino_features_resized = F.interpolate(dino_features, size=(H, W), 
+                                            mode='bilinear', align_corners=False)
+        
+        # Fuse original CNN features with DINO2 features
+        combined_features = torch.cat([x, dino_features_resized], dim=1)
+        enhanced_features = self.fusion_layer(combined_features)
+        
+        return enhanced_features
+    
+    def unfreeze_backbone(self):
+        """Unfreeze DINO2 backbone for fine-tuning."""
+        for param in self.dino_model.parameters():
+            param.requires_grad = True
+        self.freeze_backbone = False
+        print("DINO2 backbone unfrozen for fine-tuning")
+    
+    def freeze_backbone_layers(self):
+        """Freeze DINO2 backbone to prevent training."""
+        for param in self.dino_model.parameters():
+            param.requires_grad = False
+            # Mark parameters to prevent trainer from unfreezing them
+            param._ultralytics_frozen = True
+        self.freeze_backbone = True
+        print("DINO2 backbone frozen with protected parameters")
+    
+    def train(self, mode=True):
+        """Override train mode to maintain frozen state of DINO2."""
+        super().train(mode)
+        if self.freeze_backbone:
+            # Keep DINO2 model in eval mode if frozen
+            self.dino_model.eval()
+            # Re-apply freezing to counter any trainer interventions
+            for param in self.dino_model.parameters():
+                param.requires_grad = False
+        return self

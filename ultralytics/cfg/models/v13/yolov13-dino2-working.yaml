@@ -1,0 +1,51 @@
+nc: 80 # number of classes
+scales: # model compound scaling constants, i.e. 'model=yolov13n.yaml' will call yolov13.yaml with scale 'n'
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024]   # Nano
+  s: [0.50, 0.50, 1024]   # Small
+  l: [1.00, 1.00, 512]    # Large
+  x: [1.00, 1.50, 512]    # Extra Large
+
+backbone:
+  # [from, repeats, module, args]
+  # Standard CNN layers building up to DINO2 integration point
+  - [-1, 1, Conv,  [64, 3, 2]] # 0-P1/2
+  - [-1, 1, Conv,  [128, 3, 2]] # 1-P2/4
+  - [-1, 1, Conv,  [256, 3, 2]] # 2-P3/8
+  - [-1, 1, Conv,  [512, 3, 2]] # 3-P4/16
+  
+  # DINO2 enhancement - input 512ch, output 512ch
+  - [-1, 1, DINO2Backbone, ['dinov2_vitb14', True, 512]] # 4: DINO2 enhanced features (512ch)
+  
+  # Continue processing the 512 channel DINO2-enhanced features
+  - [-1, 1, Conv,  [512, 3, 1]] # 5: Keep 512 channels, process DINO2 features
+  - [-1, 1, Conv,  [1024, 3, 2]] # 6-P5/32: Expand to 1024 for P5
+
+head:
+  # Simplified head to avoid channel conflicts
+  # Use features from layers 2 (256ch), 5 (512ch), 6 (1024ch)
+  
+  # P5 (1024ch) -> P4 (512ch)
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 7: Upsample P5
+  - [-1, 1, Conv, [512, 1, 1]] # 8: Reduce channels to 512
+  - [[-1, 5], 1, Concat, [1]] # 9: Concat with DINO2-enhanced P4 (512+512=1024ch)
+  - [-1, 1, Conv, [512, 3, 1]] # 10: Process concatenated features -> 512ch
+  
+  # P4 (512ch) -> P3 (256ch) 
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 11: Upsample P4
+  - [-1, 1, Conv, [256, 1, 1]] # 12: Reduce channels to 256
+  - [[-1, 2], 1, Concat, [1]] # 13: Concat with P3 (256+256=512ch)
+  - [-1, 1, Conv, [256, 3, 1]] # 14: Process -> 256ch (final P3)
+  
+  # P3 (256ch) -> P4 (512ch)
+  - [-1, 1, Conv, [256, 3, 2]] # 15: Downsample P3
+  - [[-1, 10], 1, Concat, [1]] # 16: Concat with P4 (256+512=768ch)
+  - [-1, 1, Conv, [512, 3, 1]] # 17: Process -> 512ch (final P4)
+  
+  # P4 (512ch) -> P5 (1024ch)
+  - [-1, 1, Conv, [512, 3, 2]] # 18: Downsample P4
+  - [[-1, 6], 1, Concat, [1]] # 19: Concat with P5 (512+1024=1536ch)
+  - [-1, 1, Conv, [1024, 3, 1]] # 20: Process -> 1024ch (final P5)
+  
+  # Detection heads - P3(256ch), P4(512ch), P5(1024ch)
+  - [[14, 17, 20], 1, Detect, [nc]] # 21: Detect(P3, P4, P5)
