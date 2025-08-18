@@ -10,7 +10,14 @@ Key features:
 - Full compatibility with Ultralytics training pipeline
 
 Usage:
+    # Train with default DINO2 base model
     python train_dino2.py --data path/to/data.yaml --epochs 100 --freeze-dino2
+    
+    # Train with different YOLOv13 and DINO2 variants
+    python train_dino2.py --data data.yaml --model yolov13-dino2-simple --dino-variant dinov2_vits14
+    
+    # Train standard YOLOv13 without DINO2
+    python train_dino2.py --data data.yaml --model yolov13
 """
 
 import argparse
@@ -46,6 +53,15 @@ def main():
     parser.add_argument('--name', type=str, default='yolov13-dino2', help='Experiment name')
     parser.add_argument('--freeze-dino2', action='store_true', help='Freeze DINO2 weights')
     
+    # Model variant selection
+    parser.add_argument('--model', type=str, default='yolov13-dino2-working', 
+                       choices=['yolov13', 'yolov13-dino2', 'yolov13-dino2-simple', 
+                               'yolov13-dino2-working', 'yolov13-dino2-fixed'],
+                       help='YOLOv13 model variant')
+    parser.add_argument('--dino-variant', type=str, default='dinov2_vitb14',
+                       choices=['dinov2_vits14', 'dinov2_vitb14', 'dinov2_vitl14', 'dinov2_vitg14'],
+                       help='DINO2 model variant (only for DINO2-enabled models)')
+    
     args = parser.parse_args()
     
     # Apply the DINO2 filter to the ultralytics logger
@@ -53,6 +69,8 @@ def main():
     LOGGER.addFilter(dino2_filter)
     
     print(f"{colorstr('bright_blue', 'bold', 'YOLOv13 + DINO2 Training')}")
+    print(f"Model: {args.model}")
+    print(f"DINO2 Variant: {args.dino_variant}")
     print(f"Dataset: {args.data}")
     print(f"Epochs: {args.epochs}, Batch: {args.batch_size}")
     print(f"DINO2 Frozen: {args.freeze_dino2}")
@@ -60,14 +78,33 @@ def main():
     
     try:
         # Load model
-        model = YOLO('ultralytics/cfg/models/v13/yolov13-dino2-working.yaml')
+        model_path = f'ultralytics/cfg/models/v13/{args.model}.yaml'
+        model = YOLO(model_path)
         
-        # Configure DINO2 freezing
-        if args.freeze_dino2:
-            for module in model.model.modules():
-                if hasattr(module, '__class__') and 'DINO2Backbone' in str(module.__class__):
+        # Configure DINO2 variant and freezing
+        has_dino2 = False
+        for module in model.model.modules():
+            if hasattr(module, '__class__') and 'DINO2Backbone' in str(module.__class__):
+                has_dino2 = True
+                # Update DINO2 variant if specified
+                if hasattr(module, 'model_name') and args.dino_variant != module.model_name:
+                    print(f"🔄 Updating DINO2 variant from {module.model_name} to {args.dino_variant}")
+                    module.model_name = args.dino_variant
+                    # Reinitialize the model with new variant
+                    module._initialize_dino_model()
+                
+                # Configure freezing
+                if args.freeze_dino2:
                     module.freeze_backbone_layers()
-                    print(f"✅ DINO2 backbone frozen")
+                    print(f"✅ DINO2 backbone frozen: {args.dino_variant}")
+                else:
+                    module.unfreeze_backbone()
+                    print(f"🔓 DINO2 backbone unfrozen: {args.dino_variant}")
+        
+        if not has_dino2 and 'dino2' in args.model.lower():
+            print(f"⚠️  Warning: Model {args.model} should have DINO2 but none found")
+        elif not has_dino2:
+            print(f"ℹ️  Using standard YOLOv13 without DINO2")
         
         # Training configuration
         train_args = {
