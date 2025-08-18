@@ -8,18 +8,25 @@ This guide explains how to choose different variants of YOLOv13 and DINO2 models
 # Default: YOLOv13-DINO2 with Base DINO2 model
 python train_dino2.py --data data.yaml --epochs 100 --freeze-dino2
 
-# Fast training with smallest DINO2 model
-python train_dino2.py --data data.yaml --model yolov13-dino2-simple --dino-variant dinov2_vits14
+# Fast training with smallest models
+python train_dino2.py --data data.yaml --model yolov13-dino2-working --size n --dino-variant dinov2_vits14
 
-# Best accuracy with largest DINO2 model  
-python train_dino2.py --data data.yaml --model yolov13-dino2-working --dino-variant dinov2_vitg14
+# Balanced performance
+python train_dino2.py --data data.yaml --model yolov13-dino2-working --size s --dino-variant dinov2_vitb14
 
-# Standard YOLOv13 without DINO2
-python train_dino2.py --data data.yaml --model yolov13
+# Best accuracy with largest models
+python train_dino2.py --data data.yaml --model yolov13-dino2-working --size x --dino-variant dinov2_vitl14
+
+# Standard YOLOv13 sizes without DINO2
+python train_dino2.py --data data.yaml --model yolov13n  # Nano
+python train_dino2.py --data data.yaml --model yolov13s  # Small  
+python train_dino2.py --data data.yaml --model yolov13l  # Large
+python train_dino2.py --data data.yaml --model yolov13x  # Extra Large
 ```
 
 ## 📋 Available YOLOv13 Model Variants
 
+### Base Architecture Types
 | Model | Description | DINO2 Integration | Use Case |
 |-------|-------------|-------------------|----------|
 | `yolov13` | Standard YOLOv13 | ❌ No | Baseline comparison |
@@ -27,6 +34,29 @@ python train_dino2.py --data data.yaml --model yolov13
 | `yolov13-dino2-simple` | Simplified DINO2 integration | ✅ Yes | Faster training |
 | `yolov13-dino2-working` | Optimized DINO2 integration | ✅ Yes | **Recommended** |
 | `yolov13-dino2-fixed` | Bug-fixed DINO2 version | ✅ Yes | Stable version |
+
+### YOLOv13 Size Variants
+| Size | Model | Parameters | Speed | Accuracy | Memory | Use Case |
+|------|-------|------------|-------|----------|--------|----------|
+| **Nano** | `yolov13n` | ~2.5M | ⚡ Fastest | Good | Low | Mobile/Edge devices |
+| **Small** | `yolov13s` | ~9M | 🚀 Fast | Better | Medium | Real-time applications |
+| **Large** | `yolov13l` | ~28M | 🐌 Slower | Best | High | High accuracy needs |
+| **XLarge** | `yolov13x` | ~64M | 🐢 Slowest | Excellent | Very High | Maximum accuracy |
+
+### Size Selection Options
+```bash
+# Method 1: Direct model selection
+--model yolov13n  # Nano
+--model yolov13s  # Small
+--model yolov13l  # Large
+--model yolov13x  # Extra Large
+
+# Method 2: Base model + size modifier
+--model yolov13-dino2-working --size n  # Creates yolov13-dino2-working-n
+--model yolov13-dino2-working --size s  # Creates yolov13-dino2-working-s
+--model yolov13-dino2-working --size l  # Creates yolov13-dino2-working-l
+--model yolov13-dino2-working --size x  # Creates yolov13-dino2-working-x
+```
 
 ## 🧠 Available DINO2 Variants
 
@@ -44,8 +74,12 @@ python train_dino2.py --data data.yaml --model yolov13
 ### Model Selection Arguments
 
 ```bash
---model {yolov13,yolov13-dino2,yolov13-dino2-simple,yolov13-dino2-working,yolov13-dino2-fixed}
+--model {yolov13,yolov13n,yolov13s,yolov13l,yolov13x,yolov13-dino2,yolov13-dino2-simple,yolov13-dino2-working,yolov13-dino2-fixed}
     Choose YOLOv13 architecture variant
+
+--size {n,s,l,x}
+    Choose YOLOv13 model size (nano/small/large/xlarge)
+    Automatically applied to base models (e.g., yolov13-dino2-working + size s = yolov13-dino2-working-s)
 
 --dino-variant {dinov2_vits14,dinov2_vitb14,dinov2_vitl14,dinov2_vitg14}
     Choose DINO2 model size (only for DINO2-enabled models)
@@ -66,37 +100,69 @@ python train_dino2.py --data data.yaml --model yolov13
 
 ## 💡 Recommended Combinations
 
-### 🏃 For Fast Prototyping
+### 🏃 For Fast Prototyping (Nano + Small DINO2)
 ```bash
 python train_dino2.py \
     --data data.yaml \
-    --model yolov13-dino2-simple \
+    --model yolov13-dino2-working \
+    --size n \
     --dino-variant dinov2_vits14 \
     --epochs 50 \
     --batch-size 32 \
     --freeze-dino2
 ```
 
-### ⚖️ For Balanced Performance
+### ⚖️ For Balanced Performance (Small + Base DINO2)
 ```bash
 python train_dino2.py \
     --data data.yaml \
     --model yolov13-dino2-working \
+    --size s \
     --dino-variant dinov2_vitb14 \
     --epochs 100 \
     --batch-size 16 \
     --freeze-dino2
 ```
 
-### 🎯 For Maximum Accuracy
+### 🎯 For High Accuracy (Large + Large DINO2)
 ```bash
 python train_dino2.py \
     --data data.yaml \
     --model yolov13-dino2-working \
+    --size l \
     --dino-variant dinov2_vitl14 \
     --epochs 200 \
     --batch-size 8 \
     --freeze-dino2
+```
+
+### 🏆 For Maximum Accuracy (XLarge + Giant DINO2)
+```bash
+python train_dino2.py \
+    --data data.yaml \
+    --model yolov13-dino2-working \
+    --size x \
+    --dino-variant dinov2_vitg14 \
+    --epochs 300 \
+    --batch-size 4 \
+    --freeze-dino2
+```
+
+### ⚡ For Speed-Focused Applications (Standard YOLOv13)
+```bash
+# Nano for mobile/edge
+python train_dino2.py \
+    --data data.yaml \
+    --model yolov13n \
+    --epochs 100 \
+    --batch-size 64
+
+# Small for real-time applications  
+python train_dino2.py \
+    --data data.yaml \
+    --model yolov13s \
+    --epochs 100 \
+    --batch-size 32
 ```
 
 ### 💪 For Research/Fine-tuning
@@ -104,6 +170,7 @@ python train_dino2.py \
 python train_dino2.py \
     --data data.yaml \
     --model yolov13-dino2-working \
+    --size l \
     --dino-variant dinov2_vitb14 \
     --epochs 150 \
     --batch-size 16

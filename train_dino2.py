@@ -13,11 +13,18 @@ Usage:
     # Train with default DINO2 base model
     python train_dino2.py --data path/to/data.yaml --epochs 100 --freeze-dino2
     
-    # Train with different YOLOv13 and DINO2 variants
-    python train_dino2.py --data data.yaml --model yolov13-dino2-simple --dino-variant dinov2_vits14
+    # Train with different YOLOv13 sizes and DINO2 variants
+    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size s --dino-variant dinov2_vits14
     
-    # Train standard YOLOv13 without DINO2
-    python train_dino2.py --data data.yaml --model yolov13
+    # Train specific YOLOv13 size models
+    python train_dino2.py --data data.yaml --model yolov13n  # Nano
+    python train_dino2.py --data data.yaml --model yolov13s  # Small
+    python train_dino2.py --data data.yaml --model yolov13l  # Large
+    python train_dino2.py --data data.yaml --model yolov13x  # Extra Large
+    
+    # Train YOLOv13 + DINO2 combinations
+    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size n --dino-variant dinov2_vits14  # Fast
+    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size x --dino-variant dinov2_vitl14  # Best accuracy
 """
 
 import argparse
@@ -55,9 +62,13 @@ def main():
     
     # Model variant selection
     parser.add_argument('--model', type=str, default='yolov13-dino2-working', 
-                       choices=['yolov13', 'yolov13-dino2', 'yolov13-dino2-simple', 
+                       choices=['yolov13', 'yolov13n', 'yolov13s', 'yolov13l', 'yolov13x',
+                               'yolov13-dino2', 'yolov13-dino2-simple', 
                                'yolov13-dino2-working', 'yolov13-dino2-fixed'],
                        help='YOLOv13 model variant')
+    parser.add_argument('--size', type=str, default=None,
+                       choices=['n', 's', 'l', 'x'],
+                       help='YOLOv13 model size (nano/small/large/xlarge) - auto-applied to base models')
     parser.add_argument('--dino-variant', type=str, default='dinov2_vitb14',
                        choices=['dinov2_vits14', 'dinov2_vitb14', 'dinov2_vitl14', 'dinov2_vitg14'],
                        help='DINO2 model variant (only for DINO2-enabled models)')
@@ -68,8 +79,19 @@ def main():
     dino2_filter = DINO2Filter()
     LOGGER.addFilter(dino2_filter)
     
-    print(f"{colorstr('bright_blue', 'bold', 'YOLOv13 + DINO2 Training')}")
-    print(f"Model: {args.model}")
+    # Determine final model configuration
+    final_model = args.model
+    if args.size and not final_model.endswith(args.size):
+        # Apply size variant to base models
+        if final_model in ['yolov13', 'yolov13-dino2', 'yolov13-dino2-simple', 
+                          'yolov13-dino2-working', 'yolov13-dino2-fixed']:
+            if final_model == 'yolov13':
+                final_model = f'yolov13{args.size}'
+            else:
+                final_model = f'{final_model}-{args.size}'
+    
+    print(f"{colorstr('bright_blue', 'bold', 'YOLOv13 Training')}")
+    print(f"Model: {final_model}")
     print(f"DINO2 Variant: {args.dino_variant}")
     print(f"Dataset: {args.data}")
     print(f"Epochs: {args.epochs}, Batch: {args.batch_size}")
@@ -78,7 +100,7 @@ def main():
     
     try:
         # Load model
-        model_path = f'ultralytics/cfg/models/v13/{args.model}.yaml'
+        model_path = f'ultralytics/cfg/models/v13/{final_model}.yaml'
         model = YOLO(model_path)
         
         # Configure DINO2 variant and freezing
