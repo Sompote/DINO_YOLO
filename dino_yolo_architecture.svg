@@ -1,0 +1,225 @@
+<svg width="1400" height="1000" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1400" height="1000" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+  
+  <!-- Title -->
+  <text x="700" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#343a40">DINO YOLO Architecture</text>
+  <text x="700" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">YOLOv13 enhanced with DINO2 Vision Transformer</text>
+  
+  <!-- Input -->
+  <g id="input">
+    <rect x="50" y="100" width="120" height="80" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="5"/>
+    <text x="110" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1976d2">Input Image</text>
+    <text x="110" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#1976d2">3×640×640</text>
+    <text x="110" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">RGB</text>
+  </g>
+  
+  <!-- CNN Backbone Layers -->
+  <g id="cnn-backbone">
+    <rect x="200" y="100" width="190" height="120" fill="#fff3e0" stroke="#f57c00" stroke-width="2" rx="5"/>
+    <text x="295" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f57c00">CNN Backbone Layers</text>
+    <text x="210" y="140" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">Layer 0: Conv(64, 3×3, s=2) → P1/2</text>
+    <text x="210" y="155" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">Layer 1: Conv(128, 3×3, s=2) → P2/4</text>
+    <text x="320" y="155" font-family="Arial, sans-serif" font-size="8" fill="#999">(unused)</text>
+    <text x="210" y="170" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">Layer 2: Conv(256, 3×3, s=2) → P3/8</text>
+    <text x="210" y="185" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">Layer 3: Conv(512, 3×3, s=2) → P4/16</text>
+    <text x="295" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Output: 512ch @ 40×40</text>
+  </g>
+  
+  <!-- DINO2 Backbone (Vision Transformer) -->
+  <g id="dino2">
+    <rect x="420" y="80" width="220" height="140" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="3" rx="8"/>
+    <text x="530" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#7b1fa2">DINO2 Enhancement (Layer 4)</text>
+    <text x="530" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#7b1fa2">DINOv2-ViT-Base-14</text>
+    
+    <text x="430" y="140" font-family="Arial, sans-serif" font-size="9" fill="#7b1fa2">1. Input Projection: 512ch→3ch (RGB-like)</text>
+    <text x="430" y="155" font-family="Arial, sans-serif" font-size="9" fill="#7b1fa2">2. Resize: 40×40 → 224×224</text>
+    <text x="430" y="170" font-family="Arial, sans-serif" font-size="9" fill="#7b1fa2">3. Patch Embed: 14×14 patches → 768d</text>
+    <text x="430" y="185" font-family="Arial, sans-serif" font-size="9" fill="#7b1fa2">4. 12 Transformer Blocks (86M frozen)</text>
+    <text x="430" y="200" font-family="Arial, sans-serif" font-size="9" fill="#7b1fa2">5. Feature Adapter: 768d → 512ch</text>
+    <text x="430" y="215" font-family="Arial, sans-serif" font-size="9" fill="#7b1fa2">6. Spatial Projection + Resize: 224→40</text>
+  </g>
+  
+  <!-- CNN Processing -->
+  <g id="cnn-processing">
+    <rect x="670" y="100" width="160" height="120" fill="#fff3e0" stroke="#f57c00" stroke-width="2" rx="5"/>
+    <text x="750" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f57c00">CNN Processing</text>
+    <text x="680" y="140" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">Layer 5: Conv(512, 3×3, s=1)</text>
+    <text x="680" y="155" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">→ Process DINO2 features</text>
+    <text x="680" y="175" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">Layer 6: Conv(1024, 3×3, s=2)</text>
+    <text x="680" y="190" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">→ P5/32</text>
+    <text x="750" y="210" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Output: 1024ch @ 20×20</text>
+  </g>
+  
+  <!-- Multi-Scale Features -->
+  <g id="multiscale">
+    <text x="700" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#343a40">Multi-Scale Feature Extraction</text>
+    
+    <!-- P3 -->
+    <rect x="180" y="280" width="120" height="80" fill="#ffecb3" stroke="#ffa000" stroke-width="2" rx="5"/>
+    <text x="240" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffa000">P3 (Layer 2)</text>
+    <text x="240" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#ffa000">CNN Features</text>
+    <text x="240" y="335" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ffa000">256 channels</text>
+    <text x="240" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">80×80 spatial</text>
+    
+    <!-- P4 DINO Enhanced -->
+    <rect x="320" y="280" width="120" height="80" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2" rx="5"/>
+    <text x="380" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#7b1fa2">P4 (Layer 5)</text>
+    <text x="380" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#7b1fa2">DINO Enhanced</text>
+    <text x="380" y="335" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7b1fa2">512 channels</text>
+    <text x="380" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">40×40 spatial</text>
+    
+    <!-- P5 -->
+    <rect x="460" y="280" width="120" height="80" fill="#ffcdd2" stroke="#d32f2f" stroke-width="2" rx="5"/>
+    <text x="520" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#d32f2f">P5 (Layer 6)</text>
+    <text x="520" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#d32f2f">CNN Features</text>
+    <text x="520" y="335" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#d32f2f">1024 channels</text>
+    <text x="520" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">20×20 spatial</text>
+  </g>
+  
+  <!-- FPN/PAN Neck -->
+  <g id="neck">
+    <text x="700" y="400" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#343a40">FPN/PAN Neck</text>
+    
+    <!-- FPN (Top-down) -->
+    <rect x="200" y="430" width="200" height="100" fill="#e1f5fe" stroke="#0277bd" stroke-width="2" rx="5"/>
+    <text x="300" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#0277bd">FPN (Top-down)</text>
+    <text x="210" y="470" font-family="Arial, sans-serif" font-size="9" fill="#0277bd">L7: Upsample P5 (1024→512)</text>
+    <text x="210" y="485" font-family="Arial, sans-serif" font-size="9" fill="#0277bd">L9: Concat(P5↑, P4) → 1024ch</text>
+    <text x="210" y="500" font-family="Arial, sans-serif" font-size="9" fill="#0277bd">L11: Upsample P4 (512→256)</text>
+    <text x="210" y="515" font-family="Arial, sans-serif" font-size="9" fill="#0277bd">L13: Concat(P4↑, P3) → 512ch</text>
+    
+    <!-- PAN (Bottom-up) -->
+    <rect x="420" y="430" width="200" height="100" fill="#fce4ec" stroke="#c2185b" stroke-width="2" rx="5"/>
+    <text x="520" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#c2185b">PAN (Bottom-up)</text>
+    <text x="430" y="470" font-family="Arial, sans-serif" font-size="9" fill="#c2185b">L15: Downsample P3 (256ch)</text>
+    <text x="430" y="485" font-family="Arial, sans-serif" font-size="9" fill="#c2185b">L16: Concat(P3↓, P4) → 768ch</text>
+    <text x="430" y="500" font-family="Arial, sans-serif" font-size="9" fill="#c2185b">L18: Downsample P4 (512ch)</text>
+    <text x="430" y="515" font-family="Arial, sans-serif" font-size="9" fill="#c2185b">L19: Concat(P4↓, P5) → 1536ch</text>
+  </g>
+  
+  <!-- Detection Head -->
+  <g id="head">
+    <text x="700" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#343a40">Detection Head</text>
+    
+    <!-- Output P3 -->
+    <rect x="160" y="610" width="140" height="90" fill="#ffecb3" stroke="#ffa000" stroke-width="2" rx="5"/>
+    <text x="230" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffa000">Small Objects</text>
+    <text x="230" y="650" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#ffa000">P3 Output (L14)</text>
+    <text x="230" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ffa000">256 channels</text>
+    <text x="230" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">80×80×(nc+5)</text>
+    <text x="230" y="692" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Stride: 8×8</text>
+    
+    <!-- Output P4 -->
+    <rect x="320" y="610" width="140" height="90" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2" rx="5"/>
+    <text x="390" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#7b1fa2">Medium Objects</text>
+    <text x="390" y="650" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#7b1fa2">P4 Output (L17)</text>
+    <text x="390" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7b1fa2">512 channels</text>
+    <text x="390" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">40×40×(nc+5)</text>
+    <text x="390" y="692" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Stride: 16×16</text>
+    
+    <!-- Output P5 -->
+    <rect x="480" y="610" width="140" height="90" fill="#ffcdd2" stroke="#d32f2f" stroke-width="2" rx="5"/>
+    <text x="550" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#d32f2f">Large Objects</text>
+    <text x="550" y="650" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#d32f2f">P5 Output (L20)</text>
+    <text x="550" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#d32f2f">1024 channels</text>
+    <text x="550" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">20×20×(nc+5)</text>
+    <text x="550" y="692" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Stride: 32×32</text>
+  </g>
+  
+  <!-- Final Output -->
+  <g id="output">
+    <rect x="700" y="610" width="160" height="90" fill="#e8eaf6" stroke="#3f51b5" stroke-width="2" rx="5"/>
+    <text x="780" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#3f51b5">Final Detection</text>
+    <text x="780" y="650" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#3f51b5">Detect Module (L21)</text>
+    <text x="780" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#3f51b5">Multi-scale NMS</text>
+    <text x="780" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">Class + Box + Conf</text>
+    <text x="780" y="692" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">80 classes (COCO)</text>
+  </g>
+  
+  <!-- Model Statistics -->
+  <g id="stats">
+    <rect x="950" y="480" width="400" height="200" fill="#f8f9fa" stroke="#6c757d" stroke-width="1" rx="5"/>
+    <text x="1150" y="505" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#343a40">Model Statistics</text>
+    
+    <text x="970" y="530" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• Total Parameters: 95.8M</text>
+    <text x="970" y="550" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• DINO2 Backbone: 86M (frozen)</text>
+    <text x="970" y="570" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• YOLOv13 Layers: 9.8M (trainable)</text>
+    <text x="970" y="590" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• FLOPs: 18.1 GFLOPs</text>
+    <text x="970" y="610" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• Input Size: 640×640</text>
+    <text x="970" y="630" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• Patch Size: 14×14 (DINO2)</text>
+    <text x="970" y="650" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• Embed Dim: 768→512</text>
+    <text x="970" y="670" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• Classes: 80 (configurable)</text>
+  </g>
+  
+  <!-- Key Features -->
+  <g id="features">
+    <rect x="50" y="730" width="1300" height="120" fill="#e8f5e8" stroke="#388e3c" stroke-width="2" rx="5"/>
+    <text x="700" y="755" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#388e3c">Key Features &amp; Advantages</text>
+    
+    <text x="70" y="780" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• <tspan font-weight="bold">DINO2 Integration:</tspan> Real pretrained weights from Meta's DINOv2 model for superior feature extraction</text>
+    <text x="70" y="800" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• <tspan font-weight="bold">Transfer Learning:</tspan> Configurable weight freezing for DINO2 backbone enables efficient fine-tuning</text>
+    <text x="70" y="820" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• <tspan font-weight="bold">Hybrid Architecture:</tspan> CNN + Vision Transformer combination for global context and local details</text>
+    <text x="70" y="840" font-family="Arial, sans-serif" font-size="12" fill="#343a40">• <tspan font-weight="bold">Enhanced Detection:</tspan> FPN/PAN neck with DINO2-enhanced features for better accuracy</text>
+  </g>
+  
+  <!-- Data Flow Arrows -->
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#495057"/>
+    </marker>
+  </defs>
+  
+  <!-- Sequential backbone flow -->
+  <line x1="170" y1="140" x2="200" y2="140" stroke="#495057" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="390" y1="140" x2="420" y2="140" stroke="#495057" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="640" y1="140" x2="670" y2="140" stroke="#495057" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Backbone features to multi-scale extraction -->
+  <!-- P3 from layer 2 (256ch) -->
+  <line x1="240" y1="220" x2="240" y2="280" stroke="#ffa000" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="245" y="250" font-family="Arial, sans-serif" font-size="8" fill="#ffa000">L2→P3</text>
+  
+  <!-- P4 from layer 5 (DINO enhanced 512ch) -->
+  <line x1="750" y1="220" x2="380" y2="280" stroke="#7b1fa2" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="550" y="250" font-family="Arial, sans-serif" font-size="8" fill="#7b1fa2">L5→P4 (DINO)</text>
+  
+  <!-- P5 from layer 6 (1024ch) -->
+  <line x1="750" y1="220" x2="520" y2="280" stroke="#d32f2f" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="630" y="250" font-family="Arial, sans-serif" font-size="8" fill="#d32f2f">L6→P5</text>
+  
+  <!-- FPN Top-down flow (P5→P4→P3) -->
+  <path d="M 520 360 Q 520 380 380 380 Q 380 400 300 400" stroke="#0277bd" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="400" y="395" font-family="Arial, sans-serif" font-size="8" fill="#0277bd">FPN: P5→P4→P3</text>
+  
+  <!-- PAN Bottom-up flow (P3→P4→P5) -->
+  <path d="M 240 360 Q 240 380 380 380 Q 380 400 520 400" stroke="#c2185b" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="300" y="375" font-family="Arial, sans-serif" font-size="8" fill="#c2185b">PAN: P3→P4→P5</text>
+  
+  <!-- Neck outputs to detection heads -->
+  <line x1="300" y1="530" x2="230" y2="610" stroke="#ffa000" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="250" y="575" font-family="Arial, sans-serif" font-size="8" fill="#ffa000">L14</text>
+  
+  <line x1="520" y1="530" x2="390" y2="610" stroke="#7b1fa2" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="440" y="575" font-family="Arial, sans-serif" font-size="8" fill="#7b1fa2">L17</text>
+  
+  <line x1="520" y1="530" x2="550" y2="610" stroke="#d32f2f" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="540" y="575" font-family="Arial, sans-serif" font-size="8" fill="#d32f2f">L20</text>
+  
+  <!-- All detection heads to final output -->
+  <line x1="230" y1="700" x2="780" y2="700" stroke="#3f51b5" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="390" y1="700" x2="780" y2="700" stroke="#3f51b5" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="550" y1="700" x2="780" y2="700" stroke="#3f51b5" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="600" y="715" font-family="Arial, sans-serif" font-size="8" fill="#3f51b5">Multi-scale Detection</text>
+  
+  <!-- Architecture Type Labels -->
+  <text x="50" y="920" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#343a40">Architecture Type:</text>
+  <text x="180" y="920" font-family="Arial, sans-serif" font-size="12" fill="#7b1fa2">CNN-Transformer Hybrid</text>
+  <text x="50" y="940" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#343a40">Training Strategy:</text>
+  <text x="180" y="940" font-family="Arial, sans-serif" font-size="12" fill="#d32f2f">Frozen DINO2 + Fine-tuned YOLOv13</text>
+  <text x="50" y="960" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#343a40">Use Cases:</text>
+  <text x="180" y="960" font-family="Arial, sans-serif" font-size="12" fill="#388e3c">Object Detection, Transfer Learning, Production Deployment</text>
+  
+  <!-- Version and Credits -->
+  <text x="1350" y="980" text-anchor="end" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">DINO YOLO v1.0 | YOLOv13 + DINOv2</text>
+</svg>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-YOLOv13 with DINO2 Backbone Training Script
+YOLOv13 with DINO2 Backbone Training Script - Resume Training Edition
 
 This script trains YOLOv13 enhanced with Meta's DINO2 pretrained vision transformer backbone.
 Key features:
@@ -8,28 +8,23 @@ Key features:
 - Configurable weight freezing for transfer learning
 - Clean training output without freeze warnings
 - Full compatibility with Ultralytics training pipeline
+- **NEW**: Support for resuming from previous trained weights
 
 Usage:
-    # Train with default DINO2 base model
-    python train_dino2.py --data path/to/data.yaml --epochs 100 --freeze-dino2
+    # Resume from previous weights
+    python train_dino2_resume.py --data path/to/data.yaml --weights path/to/weights.pt --epochs 100 --freeze-dino2
     
-    # Train with different YOLOv13 sizes and DINO2 variants
-    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size s --dino-variant dinov2_vits14
+    # Resume with different settings
+    python train_dino2_resume.py --data data.yaml --weights runs/detect/yolov13-dino25/weights/best.pt --epochs 50
     
-    # Train specific YOLOv13 size models
-    python train_dino2.py --data data.yaml --model yolov13n  # Nano
-    python train_dino2.py --data data.yaml --model yolov13s  # Small
-    python train_dino2.py --data data.yaml --model yolov13l  # Large
-    python train_dino2.py --data data.yaml --model yolov13x  # Extra Large
-    
-    # Train YOLOv13 + DINO2 combinations
-    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size n --dino-variant dinov2_vits14  # Fast
-    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size x --dino-variant dinov2_vitl14  # Best accuracy
+    # Start fresh training (same as original)
+    python train_dino2_resume.py --data data.yaml --model yolov13-dino2-working --size s --dino-variant dinov2_vits14
 """
 
 import argparse
 import logging
 import sys
+from pathlib import Path
 from ultralytics import YOLO
 from ultralytics.utils import LOGGER, colorstr
 
@@ -50,26 +45,29 @@ class DINO2Filter(logging.Filter):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Train YOLOv13 with DINO2 Backbone')
+    parser = argparse.ArgumentParser(description='Train YOLOv13 with DINO2 Backbone - Resume Training')
     
-    # Arguments
+    # Core arguments
     parser.add_argument('--data', type=str, required=True, help='Dataset YAML file')
     parser.add_argument('--epochs', type=int, default=100, help='Training epochs')
     parser.add_argument('--batch-size', type=int, default=16, help='Batch size')
     parser.add_argument('--imgsz', type=int, default=640, help='Image size')
-    parser.add_argument('--name', type=str, default='yolov13-dino2', help='Experiment name')
+    parser.add_argument('--name', type=str, default='yolov13-dino2-resumed', help='Experiment name')
     parser.add_argument('--freeze-dino2', action='store_true', help='Freeze DINO2 weights')
     parser.add_argument('--device', type=str, default=None, help='Device to run on, e.g., 0 or 0,1,2,3 for multi-GPU')
     
-    # Model variant selection
+    # **NEW**: Weights loading option
+    parser.add_argument('--weights', type=str, default=None, help='Path to previous trained weights (.pt file)')
+    
+    # Model variant selection (only used when --weights is not provided)
     parser.add_argument('--model', type=str, default='yolov13-dino2-working', 
                        choices=['yolov13', 'yolov13n', 'yolov13s', 'yolov13l', 'yolov13x',
                                'yolov13-dino2', 'yolov13-dino2-simple', 
                                'yolov13-dino2-working', 'yolov13-dino2-fixed'],
-                       help='YOLOv13 model variant')
+                       help='YOLOv13 model variant (ignored if --weights is provided)')
     parser.add_argument('--size', type=str, default=None,
                        choices=['n', 's', 'l', 'x'],
-                       help='YOLOv13 model size (nano/small/large/xlarge) - auto-applied to base models')
+                       help='YOLOv13 model size (ignored if --weights is provided)')
     parser.add_argument('--dino-variant', type=str, default='dinov2_vitb14',
                        choices=['dinov2_vits14', 'dinov2_vitb14', 'dinov2_vitl14', 'dinov2_vitg14'],
                        help='DINO2 model variant (only for DINO2-enabled models)')
@@ -80,30 +78,39 @@ def main():
     dino2_filter = DINO2Filter()
     LOGGER.addFilter(dino2_filter)
     
-    # Determine final model configuration
-    final_model = args.model
-    if args.size and not final_model.endswith(args.size):
-        # Apply size variant to base models
-        if final_model in ['yolov13', 'yolov13-dino2', 'yolov13-dino2-simple', 
-                          'yolov13-dino2-working', 'yolov13-dino2-fixed']:
-            if final_model == 'yolov13':
-                final_model = f'yolov13{args.size}'
-            else:
-                final_model = f'{final_model}-{args.size}'
-    
-    print(f"{colorstr('bright_blue', 'bold', 'YOLOv13 Training')}")
-    print(f"Model: {final_model}")
-    print(f"DINO2 Variant: {args.dino_variant}")
+    print(f"{colorstr('bright_blue', 'bold', 'YOLOv13 Resume Training')}")
     print(f"Dataset: {args.data}")
     print(f"Epochs: {args.epochs}, Batch: {args.batch_size}")
     print(f"Device: {args.device if args.device else 'auto'}")
     print(f"DINO2 Frozen: {args.freeze_dino2}")
-    print("=" * 50)
     
     try:
-        # Load model
-        model_path = f'ultralytics/cfg/models/v13/{final_model}.yaml'
-        model = YOLO(model_path)
+        # **NEW**: Load model from weights or create new
+        if args.weights:
+            if not Path(args.weights).exists():
+                raise FileNotFoundError(f"Weights file not found: {args.weights}")
+            
+            print(f"🔄 Loading model from weights: {args.weights}")
+            model = YOLO(args.weights)
+            print(f"✅ Model loaded successfully from {args.weights}")
+            
+        else:
+            # Original behavior - create new model
+            final_model = args.model
+            if args.size and not final_model.endswith(args.size):
+                if final_model in ['yolov13', 'yolov13-dino2', 'yolov13-dino2-simple', 
+                                  'yolov13-dino2-working', 'yolov13-dino2-fixed']:
+                    if final_model == 'yolov13':
+                        final_model = f'yolov13{args.size}'
+                    else:
+                        final_model = f'{final_model}-{args.size}'
+            
+            print(f"🆕 Creating new model: {final_model}")
+            model_path = f'ultralytics/cfg/models/v13/{final_model}.yaml'
+            model = YOLO(model_path)
+        
+        print(f"DINO2 Variant: {args.dino_variant}")
+        print("=" * 50)
         
         # Configure DINO2 variant and freezing
         has_dino2 = False
@@ -115,17 +122,22 @@ def main():
                     print(f"🔄 Updating DINO2 variant from {module.model_name} to {args.dino_variant}")
                     module.model_name = args.dino_variant
                     # Reinitialize the model with new variant
-                    module._initialize_dino_model()
+                    if hasattr(module, '_initialize_dino_model'):
+                        module._initialize_dino_model()
                 
                 # Configure freezing
                 if args.freeze_dino2:
-                    module.freeze_backbone_layers()
+                    if hasattr(module, 'freeze_backbone_layers'):
+                        module.freeze_backbone_layers()
                     print(f"✅ DINO2 backbone frozen: {args.dino_variant}")
                 else:
-                    module.unfreeze_backbone()
+                    if hasattr(module, 'unfreeze_backbone'):
+                        module.unfreeze_backbone()
                     print(f"🔓 DINO2 backbone unfrozen: {args.dino_variant}")
         
-        if not has_dino2 and 'dino2' in args.model.lower():
+        if not has_dino2 and args.weights:
+            print(f"ℹ️  Loaded model from weights (may or may not have DINO2)")
+        elif not has_dino2 and 'dino2' in args.model.lower():
             print(f"⚠️  Warning: Model {args.model} should have DINO2 but none found")
         elif not has_dino2:
             print(f"ℹ️  Using standard YOLOv13 without DINO2")
@@ -146,7 +158,7 @@ def main():
         if args.device is not None:
             train_args['device'] = args.device
         
-        print(f"\nStarting training...")
+        print(f"\nStarting {'resume' if args.weights else 'new'} training...")
         
         # Train with filtered logging
         results = model.train(**train_args)
@@ -163,8 +175,11 @@ def main():
                 print(f"Final mAP50-95: {metrics.map:.4f}")
         
         print(f"\nTraining Summary:")
-        print(f"   • DINO2 pretrained weights: LOADED ✅") 
-        print(f"   • Model architecture: YOLOv13 + DINO2 ✅")
+        if args.weights:
+            print(f"   • Resumed from: {args.weights} ✅")
+        else:
+            print(f"   • DINO2 pretrained weights: LOADED ✅") 
+            print(f"   • Model architecture: YOLOv13 + DINO2 ✅")
         print(f"   • Training completed successfully ✅")
         
         # Remove filter to restore normal logging
@@ -172,6 +187,8 @@ def main():
         
     except Exception as e:
         print(f"❌ Training failed: {e}")
+        import traceback
+        traceback.print_exc()
         # Remove filter even on failure
         LOGGER.removeFilter(dino2_filter)
         return
