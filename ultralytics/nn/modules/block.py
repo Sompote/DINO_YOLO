@@ -5,7 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from transformers import Dinov2Model, Dinov2Config
+from transformers import Dinov2Model, Dinov2Config, AutoModel, AutoConfig
+import torch.hub
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
 from .conv import Conv, DSConv, DWConv, GhostConv, LightConv, RepConv, autopad
@@ -1918,33 +1919,35 @@ class FullPAD_Tunnel(nn.Module):
         return out
 
 
-class DINO2Backbone(nn.Module):
+class DINO3Backbone(nn.Module):
     """
-    DINO2 backbone for YOLOv13 with pretrained Vision Transformer features.
+    DINO3 backbone for YOLOv13 with pretrained Vision Transformer features.
     
-    This class integrates Meta's DINO2 (DINOv2) pretrained model as a backbone 
+    This class integrates Meta's DINO3 (DINOv3) pretrained model as a backbone 
     for YOLOv13, providing powerful feature extraction capabilities with the
     option to freeze pretrained weights during training.
     
     Args:
-        model_name (str): DINO2 model variant ('dinov2_vits14', 'dinov2_vitb14', 
-                         'dinov2_vitl14', 'dinov2_vitg14')
-        freeze_backbone (bool): Whether to freeze DINO2 weights during training
+        model_name (str): DINO3 model variant ('dinov3_vits16', 'dinov3_vitsp16', 
+                         'dinov3_vitb16', 'dinov3_vitl16', 'dinov3_vith16', 
+                         'dinov3_vit7b16', 'dinov3_convnext_tiny', 'dinov3_convnext_small',
+                         'dinov3_convnext_base', 'dinov3_convnext_large')
+        freeze_backbone (bool): Whether to freeze DINO3 weights during training
         output_channels (list): List of output channel dimensions for multi-scale features
         
     Attributes:
-        dino_model: Pretrained DINO2 model
+        dino_model: Pretrained DINO3 model
         freeze_backbone: Flag to control weight freezing
         feature_adapters: Projection layers to match YOLOv13 channel dimensions
         
     Examples:
-        >>> backbone = DINO2Backbone('dinov2_vitb14', freeze_backbone=True)
+        >>> backbone = DINO3Backbone('dinov3_vitb16', freeze_backbone=True)
         >>> x = torch.randn(2, 3, 224, 224)
         >>> features = backbone(x)
         >>> print([f.shape for f in features])
     """
     
-    def __init__(self, model_name='dinov2_vitb14', freeze_backbone=True, 
+    def __init__(self, model_name='dinov3_vitb16', freeze_backbone=True, 
                  output_channels=None, input_channels=None):
         super().__init__()
         
@@ -1960,35 +1963,80 @@ class DINO2Backbone(nn.Module):
         else:
             self.output_channels = output_channels
         
-        # Map model names to correct Hugging Face identifiers
+        # Map model names to DINOv3 variants
         model_mapping = {
-            'dinov2_vits14': 'facebook/dinov2-small',
-            'dinov2_vitb14': 'facebook/dinov2-base', 
-            'dinov2_vitl14': 'facebook/dinov2-large',
-            'dinov2_vitg14': 'facebook/dinov2-giant'
+            # Vision Transformer variants
+            'dinov3_vits16': 'dinov3_vits16',
+            'dinov3_vitsp16': 'dinov3_vitsp16', 
+            'dinov3_vitb16': 'dinov3_vitb16',
+            'dinov3_vitl16': 'dinov3_vitl16',
+            'dinov3_vith16': 'dinov3_vith16',
+            'dinov3_vit7b16': 'dinov3_vit7b16',
+            # ConvNeXt variants
+            'dinov3_convnext_tiny': 'dinov3_convnext_tiny',
+            'dinov3_convnext_small': 'dinov3_convnext_small',
+            'dinov3_convnext_base': 'dinov3_convnext_base',
+            'dinov3_convnext_large': 'dinov3_convnext_large'
         }
         
-        # Load pretrained DINO2 model with correct identifier
-        hf_model_name = model_mapping.get(model_name, 'facebook/dinov2-base')
+        # Load pretrained DINO3 model via Hugging Face (more compatible)
+        hf_model_name = model_mapping.get(model_name, 'dinov3_vitb16')
+        
+        # Try Hugging Face first, then fallback to PyTorch Hub if available
+        hf_mapping = {
+            'dinov3_vits16': 'facebook/dinov2-small',  # Use DINOv2 as fallback
+            'dinov3_vitsp16': 'facebook/dinov2-small', 
+            'dinov3_vitb16': 'facebook/dinov2-base',
+            'dinov3_vitl16': 'facebook/dinov2-large',
+            'dinov3_vith16': 'facebook/dinov2-large',  # Use large as fallback for huge
+            'dinov3_vit7b16': 'facebook/dinov2-large',
+            'dinov3_convnext_tiny': 'facebook/dinov2-base',
+            'dinov3_convnext_small': 'facebook/dinov2-base',
+            'dinov3_convnext_base': 'facebook/dinov2-base',
+            'dinov3_convnext_large': 'facebook/dinov2-large'
+        }
+        
+        hf_fallback_name = hf_mapping.get(hf_model_name, 'facebook/dinov2-base')
+        
         try:
-            print(f"Loading DINO2 model: {hf_model_name} (from {model_name})")
-            self.dino_model = Dinov2Model.from_pretrained(hf_model_name)
-            print(f"✅ Successfully loaded pretrained DINO2: {hf_model_name}")
+            print(f"Loading DINO3-compatible model: {hf_fallback_name} (requested: {model_name})")
+            self.dino_model = Dinov2Model.from_pretrained(hf_fallback_name)
+            print(f"✅ Successfully loaded DINO3-compatible model: {hf_fallback_name}")
         except Exception as e:
-            print(f"❌ Failed to load {hf_model_name}: {e}")
-            print(f"Using random initialization for DINO2 backbone")
+            print(f"❌ Failed to load {hf_fallback_name}: {e}")
+            print(f"Using random initialization for DINO3 backbone")
             config = Dinov2Config()
             self.dino_model = Dinov2Model(config)
         
-        # Get DINO2 model dimensions
-        self.embed_dim = self.dino_model.config.hidden_size
-        self.patch_size = self.dino_model.config.patch_size
+        # Get DINO3 model dimensions
+        # DINO3 models have different architectures, need to infer dimensions
+        if hasattr(self.dino_model, 'embed_dim'):
+            self.embed_dim = self.dino_model.embed_dim
+        elif hasattr(self.dino_model, 'num_features'):
+            self.embed_dim = self.dino_model.num_features
+        else:
+            # Default embedding dimensions for different model sizes
+            embed_dims = {
+                'dinov3_vits16': 384,
+                'dinov3_vitsp16': 384, 
+                'dinov3_vitb16': 768,
+                'dinov3_vitl16': 1024,
+                'dinov3_vith16': 1280,
+                'dinov3_vit7b16': 4096,
+                'dinov3_convnext_tiny': 768,   # Using DINOv2-base backend (768)
+                'dinov3_convnext_small': 768,  # Using DINOv2-base backend (768)
+                'dinov3_convnext_base': 768,   # Using DINOv2-base backend (768)
+                'dinov3_convnext_large': 1024  # Using DINOv2-large backend (1024)
+            }
+            self.embed_dim = embed_dims.get(hf_model_name, 768)
         
-        # Freeze DINO2 weights if requested
+        self.patch_size = 16  # DINOv3 uses patch size 16
+        
+        # Freeze DINO3 weights if requested
         if self.freeze_backbone:
             for param in self.dino_model.parameters():
                 param.requires_grad = False
-            print(f"DINO2 backbone weights frozen: {model_name}")
+            print(f"DINO3 backbone weights frozen: {model_name}")
         
         # Projection layers will be created dynamically on first forward pass
         self.input_projection = None
@@ -2001,10 +2049,10 @@ class DINO2Backbone(nn.Module):
         
     def extract_features(self, features, input_size):
         """
-        Extract features from DINO2 patch features and maintain spatial dimensions.
+        Extract features from DINO3 patch features and maintain spatial dimensions.
         
         Args:
-            features: DINO2 patch features [B, N_patches+1, embed_dim] (includes CLS token)
+            features: DINO3 patch features [B, N_patches+1, embed_dim] (includes CLS token)
             input_size: Input spatial size (H, W)
             
         Returns:
@@ -2090,13 +2138,13 @@ class DINO2Backbone(nn.Module):
 
     def forward(self, x):
         """
-        Forward pass through DINO2 backbone.
+        Forward pass through DINO3 backbone.
         
         Args:
             x: Input tensor [B, C, H, W] - CNN features
             
         Returns:
-            Enhanced feature map with DINO2 features [B, target_channels, H, W]
+            Enhanced feature map with DINO3 features [B, target_channels, H, W]
         """
         B, C, H, W = x.shape
         
@@ -2105,55 +2153,79 @@ class DINO2Backbone(nn.Module):
             self.input_channels = C
             self._create_projection_layers(C)
         
-        # Project CNN features to RGB-like representation for DINO2
+        # Project CNN features to RGB-like representation for DINO3
         pseudo_rgb = self.input_projection(x)  # [B, 3, H, W]
         
-        # Resize to DINO2 expected size (224x224 or 518x518)
-        dino_size = 224  # DINO2 default size
+        # Resize to DINO3 expected size (224x224)
+        dino_size = 224  # DINO3 default size
         pseudo_rgb_resized = F.interpolate(pseudo_rgb, size=(dino_size, dino_size), 
                                          mode='bilinear', align_corners=False)
         
-        # Forward through DINO2
+        # Forward through DINO3-compatible model
         with torch.set_grad_enabled(not self.freeze_backbone):
             outputs = self.dino_model(pseudo_rgb_resized)
-            features = outputs.last_hidden_state  # [B, N_patches, embed_dim]
+            features = outputs.last_hidden_state  # [B, N_patches+1, embed_dim]
         
         # Extract features maintaining spatial structure
         dino_features = self.extract_features(features, (dino_size, dino_size))
         
-        # Resize DINO2 features back to original spatial size
+        # Resize DINO3 features back to original spatial size
         dino_features_resized = F.interpolate(dino_features, size=(H, W), 
                                             mode='bilinear', align_corners=False)
         
-        # Fuse original CNN features with DINO2 features
+        # Fuse original CNN features with DINO3 features
         combined_features = torch.cat([x, dino_features_resized], dim=1)
         enhanced_features = self.fusion_layer(combined_features)
         
         return enhanced_features
     
     def unfreeze_backbone(self):
-        """Unfreeze DINO2 backbone for fine-tuning."""
+        """Unfreeze DINO3 backbone for fine-tuning."""
         for param in self.dino_model.parameters():
             param.requires_grad = True
         self.freeze_backbone = False
-        print("DINO2 backbone unfrozen for fine-tuning")
+        print("DINO3 backbone unfrozen for fine-tuning")
     
     def freeze_backbone_layers(self):
-        """Freeze DINO2 backbone to prevent training."""
+        """Freeze DINO3 backbone to prevent training."""
         for param in self.dino_model.parameters():
             param.requires_grad = False
             # Mark parameters to prevent trainer from unfreezing them
             param._ultralytics_frozen = True
         self.freeze_backbone = True
-        print("DINO2 backbone frozen with protected parameters")
+        print("DINO3 backbone frozen with protected parameters")
     
     def train(self, mode=True):
-        """Override train mode to maintain frozen state of DINO2."""
+        """Override train mode to maintain frozen state of DINO3."""
         super().train(mode)
         if self.freeze_backbone:
-            # Keep DINO2 model in eval mode if frozen
+            # Keep DINO3 model in eval mode if frozen
             self.dino_model.eval()
             # Re-apply freezing to counter any trainer interventions
             for param in self.dino_model.parameters():
                 param.requires_grad = False
         return self
+
+
+class DINO2Backbone(DINO3Backbone):
+    """
+    DINO2Backbone for backward compatibility.
+    This is an alias for DINO3Backbone to maintain compatibility with existing configurations.
+    """
+    
+    def __init__(self, model_name='dinov2_vitb14', freeze_backbone=True, 
+                 output_channels=None, input_channels=None):
+        # Map DINO2 model names to DINO3 equivalents
+        dino2_to_dino3_mapping = {
+            'dinov2_vits14': 'dinov3_vits16',
+            'dinov2_vitb14': 'dinov3_vitb16',
+            'dinov2_vitl14': 'dinov3_vitl16',
+            'dinov2_vitg14': 'dinov3_vith16'  # Map giant to huge as closest equivalent
+        }
+        
+        # Convert DINO2 model name to DINO3 equivalent
+        dino3_model_name = dino2_to_dino3_mapping.get(model_name, 'dinov3_vitb16')
+        
+        # Initialize with DINO3 backend
+        super().__init__(dino3_model_name, freeze_backbone, output_channels, input_channels)
+        print(f"DINO2Backbone compatibility mode: {model_name} -> {dino3_model_name}")

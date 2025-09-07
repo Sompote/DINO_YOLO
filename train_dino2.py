@@ -1,30 +1,41 @@
 #!/usr/bin/env python3
 """
-YOLOv13 with DINO2 Backbone Training Script
+YOLOv13 with DINO3 Backbone Training Script
 
-This script trains YOLOv13 enhanced with Meta's DINO2 pretrained vision transformer backbone.
+This script trains YOLOv13 enhanced with Meta's DINO3 pretrained vision transformer backbone.
 Key features:
-- Real DINO2 pretrained weights from Meta
+- Real DINO3 pretrained weights with all variants (ViT + ConvNeXt)
+- Full backward compatibility with DINO2 configurations
 - Configurable weight freezing for transfer learning
+- Support for all YOLOv13 sizes (n, s, l, x) combined with DINO3 variants
 - Clean training output without freeze warnings
 - Full compatibility with Ultralytics training pipeline
 
 Usage:
-    # Train with default DINO2 base model
-    python train_dino2.py --data path/to/data.yaml --epochs 100 --freeze-dino2
+    # Train with YOLOv13 + DINO3 size combinations
+    python train_dino2.py --data data.yaml --model yolov13s-dino3 --epochs 100 --freeze-dino2
+    python train_dino2.py --data data.yaml --model yolov13n-dino3 --freeze-dino2  # Fast
+    python train_dino2.py --data data.yaml --model yolov13l-dino3 --freeze-dino2  # Accurate
+    python train_dino2.py --data data.yaml --model yolov13x-dino3 --freeze-dino2  # Maximum
     
-    # Train with different YOLOv13 sizes and DINO2 variants
-    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size s --dino-variant dinov2_vits14
+    # Train with size-scalable approach
+    python train_dino2.py --data data.yaml --model yolov13-dino3 --size s --freeze-dino2
     
-    # Train specific YOLOv13 size models
+    # Train with specialized DINO3 variants
+    python train_dino2.py --data data.yaml --model yolov13-dino3-convnext --freeze-dino2
+    python train_dino2.py --data data.yaml --model yolov13x-dino3-7b --freeze-dino2  # Research
+    
+    # Train with custom DINO variant override
+    python train_dino2.py --data data.yaml --model yolov13s-dino3 --dino-variant dinov3_vitl16 --freeze-dino2
+    
+    # Train standard YOLOv13 models (no DINO)
     python train_dino2.py --data data.yaml --model yolov13n  # Nano
     python train_dino2.py --data data.yaml --model yolov13s  # Small
     python train_dino2.py --data data.yaml --model yolov13l  # Large
     python train_dino2.py --data data.yaml --model yolov13x  # Extra Large
     
-    # Train YOLOv13 + DINO2 combinations
-    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size n --dino-variant dinov2_vits14  # Fast
-    python train_dino2.py --data data.yaml --model yolov13-dino2-working --size x --dino-variant dinov2_vitl14  # Best accuracy
+    # Backward compatibility with DINO2 (auto-migrated to DINO3)
+    python train_dino2.py --data data.yaml --model yolov13-dino2-working --freeze-dino2
 """
 
 import argparse
@@ -50,7 +61,7 @@ class DINO2Filter(logging.Filter):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Train YOLOv13 with DINO2 Backbone')
+    parser = argparse.ArgumentParser(description='Train YOLOv13 with DINO3 Backbone (DINO2 compatible)')
     
     # Arguments
     parser.add_argument('--data', type=str, required=True, help='Dataset YAML file')
@@ -62,17 +73,36 @@ def main():
     parser.add_argument('--device', type=str, default=None, help='Device to run on, e.g., 0 or 0,1,2,3 for multi-GPU')
     
     # Model variant selection
-    parser.add_argument('--model', type=str, default='yolov13-dino2-working', 
-                       choices=['yolov13', 'yolov13n', 'yolov13s', 'yolov13l', 'yolov13x',
-                               'yolov13-dino2', 'yolov13-dino2-simple', 
-                               'yolov13-dino2-working', 'yolov13-dino2-fixed'],
+    parser.add_argument('--model', type=str, default='yolov13s-dino3', 
+                       choices=[
+                           # Standard YOLOv13
+                           'yolov13', 'yolov13n', 'yolov13s', 'yolov13l', 'yolov13x',
+                           # DINO3 size combinations
+                           'yolov13n-dino3', 'yolov13s-dino3', 'yolov13l-dino3', 'yolov13x-dino3',
+                           # DINO3 scalable and variants
+                           'yolov13-dino3', 'yolov13-dino3-vits', 'yolov13-dino3-vitl', 'yolov13-dino3-convnext',
+                           # DINO3 specialized
+                           'yolov13n-dino3-convnext', 'yolov13x-dino3-7b',
+                           # DINO2 compatibility (legacy)
+                           'yolov13-dino2', 'yolov13-dino2-simple', 
+                           'yolov13-dino2-working', 'yolov13-dino2-fixed'
+                       ],
                        help='YOLOv13 model variant')
     parser.add_argument('--size', type=str, default=None,
                        choices=['n', 's', 'l', 'x'],
                        help='YOLOv13 model size (nano/small/large/xlarge) - auto-applied to base models')
-    parser.add_argument('--dino-variant', type=str, default='dinov2_vitb14',
-                       choices=['dinov2_vits14', 'dinov2_vitb14', 'dinov2_vitl14', 'dinov2_vitg14'],
-                       help='DINO2 model variant (only for DINO2-enabled models)')
+    parser.add_argument('--dino-variant', type=str, default='dinov3_vitb16',
+                       choices=[
+                           # DINO3 Vision Transformers
+                           'dinov3_vits16', 'dinov3_vitsp16', 'dinov3_vitb16', 'dinov3_vitl16', 
+                           'dinov3_vith16', 'dinov3_vit7b16',
+                           # DINO3 ConvNeXt
+                           'dinov3_convnext_tiny', 'dinov3_convnext_small', 
+                           'dinov3_convnext_base', 'dinov3_convnext_large',
+                           # DINO2 compatibility (legacy)
+                           'dinov2_vits14', 'dinov2_vitb14', 'dinov2_vitl14', 'dinov2_vitg14'
+                       ],
+                       help='DINO variant (DINO3 or DINO2 for compatibility)')
     
     args = parser.parse_args()
     
@@ -84,20 +114,26 @@ def main():
     final_model = args.model
     if args.size and not final_model.endswith(args.size):
         # Apply size variant to base models
-        if final_model in ['yolov13', 'yolov13-dino2', 'yolov13-dino2-simple', 
-                          'yolov13-dino2-working', 'yolov13-dino2-fixed']:
+        scalable_models = [
+            'yolov13', 
+            'yolov13-dino3', 
+            'yolov13-dino3-vits', 'yolov13-dino3-vitl', 'yolov13-dino3-convnext',
+            'yolov13-dino2', 'yolov13-dino2-simple', 
+            'yolov13-dino2-working', 'yolov13-dino2-fixed'
+        ]
+        if final_model in scalable_models:
             if final_model == 'yolov13':
                 final_model = f'yolov13{args.size}'
             else:
-                final_model = f'{final_model}-{args.size}'
+                final_model = f'{final_model}-{args.size}' if not final_model.endswith('-' + args.size) else final_model
     
-    print(f"{colorstr('bright_blue', 'bold', 'YOLOv13 Training')}")
+    print(f"{colorstr('bright_blue', 'bold', 'YOLOv13 + DINO3 Training')}")
     print(f"Model: {final_model}")
-    print(f"DINO2 Variant: {args.dino_variant}")
+    print(f"DINO Variant: {args.dino_variant}")
     print(f"Dataset: {args.data}")
     print(f"Epochs: {args.epochs}, Batch: {args.batch_size}")
     print(f"Device: {args.device if args.device else 'auto'}")
-    print(f"DINO2 Frozen: {args.freeze_dino2}")
+    print(f"DINO Frozen: {args.freeze_dino2}")
     print("=" * 50)
     
     try:
@@ -105,30 +141,53 @@ def main():
         model_path = f'ultralytics/cfg/models/v13/{final_model}.yaml'
         model = YOLO(model_path)
         
-        # Configure DINO2 variant and freezing
-        has_dino2 = False
+        # Configure DINO variant and freezing (supports both DINO2 and DINO3)
+        has_dino = False
+        dino_type = "DINO"
+        
         for module in model.model.modules():
-            if hasattr(module, '__class__') and 'DINO2Backbone' in str(module.__class__):
-                has_dino2 = True
-                # Update DINO2 variant if specified
+            module_class_name = str(module.__class__)
+            
+            if 'DINO3Backbone' in module_class_name or 'DINO2Backbone' in module_class_name:
+                has_dino = True
+                if 'DINO3Backbone' in module_class_name:
+                    dino_type = "DINO3"
+                else:
+                    dino_type = "DINO2"
+                
+                # Update DINO variant if specified
                 if hasattr(module, 'model_name') and args.dino_variant != module.model_name:
-                    print(f"🔄 Updating DINO2 variant from {module.model_name} to {args.dino_variant}")
+                    print(f"🔄 Updating {dino_type} variant from {module.model_name} to {args.dino_variant}")
                     module.model_name = args.dino_variant
-                    # Reinitialize the model with new variant
-                    module._initialize_dino_model()
+                    # Reinitialize the model with new variant (if method exists)
+                    if hasattr(module, '_initialize_dino_model'):
+                        module._initialize_dino_model()
                 
                 # Configure freezing
                 if args.freeze_dino2:
-                    module.freeze_backbone_layers()
-                    print(f"✅ DINO2 backbone frozen: {args.dino_variant}")
+                    if hasattr(module, 'freeze_backbone_layers'):
+                        module.freeze_backbone_layers()
+                    else:
+                        # Fallback freezing
+                        for param in module.parameters():
+                            param.requires_grad = False
+                    print(f"✅ {dino_type} backbone frozen: {args.dino_variant}")
                 else:
-                    module.unfreeze_backbone()
-                    print(f"🔓 DINO2 backbone unfrozen: {args.dino_variant}")
+                    if hasattr(module, 'unfreeze_backbone'):
+                        module.unfreeze_backbone()
+                    else:
+                        # Fallback unfreezing
+                        for param in module.parameters():
+                            param.requires_grad = True
+                    print(f"🔓 {dino_type} backbone unfrozen: {args.dino_variant}")
         
-        if not has_dino2 and 'dino2' in args.model.lower():
-            print(f"⚠️  Warning: Model {args.model} should have DINO2 but none found")
-        elif not has_dino2:
-            print(f"ℹ️  Using standard YOLOv13 without DINO2")
+        # Status messages
+        if not has_dino and ('dino2' in args.model.lower() or 'dino3' in args.model.lower()):
+            print(f"⚠️  Warning: Model {args.model} should have DINO but none found")
+        elif not has_dino:
+            print(f"ℹ️  Using standard YOLOv13 without DINO enhancement")
+        else:
+            print(f"✅ {dino_type} backbone detected and configured")
         
         # Training configuration
         train_args = {

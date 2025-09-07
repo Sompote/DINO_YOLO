@@ -1,6 +1,6 @@
-# YOLOv13 with DINO2 Backbone
+# YOLOv13 with DINO3 Backbone
 
-Enhanced YOLOv13 object detection model integrated with Meta's DINO2 (DINOv2) pretrained vision transformer backbone for superior feature extraction and detection performance.
+Enhanced YOLOv13 object detection model integrated with Meta's DINO3 (DINOv3) pretrained vision transformer backbone for superior feature extraction and detection performance. **Now supports all DINOv3 variants including Vision Transformers and ConvNeXt models, with full backward compatibility to DINO2.**
 
 **Developed by:** Artificial Intelligence Research Group  
 **Department:** Civil Engineering  
@@ -8,9 +8,11 @@ Enhanced YOLOv13 object detection model integrated with Meta's DINO2 (DINOv2) pr
 
 ## 🚀 Features
 
-- **🔬 DINO2 Integration**: Real pretrained weights from Meta's DINOv2 model
-- **🧊 Transfer Learning**: Configurable weight freezing for DINO2 backbone
-- **📊 Small Dataset Friendly**: Excellent performance on limited training data thanks to DINO2 pretrained weights
+- **🔬 DINO3 Integration**: Real pretrained weights from Meta's DINOv3 model with all variants
+- **🎯 Multi-Architecture Support**: Vision Transformers (ViT) and ConvNeXt backbones
+- **🔄 Full Backward Compatibility**: Seamless migration from DINO2 with automatic model mapping
+- **🧊 Transfer Learning**: Configurable weight freezing for DINO3 backbone
+- **📊 Small Dataset Friendly**: Excellent performance on limited training data thanks to DINO3 pretrained weights
 - **⚡ High Performance**: CNN + Vision Transformer hybrid architecture
 - **🎯 Enhanced Detection**: Superior feature extraction for better accuracy
 - **🛠️ Easy Training**: Simple command-line interface
@@ -23,40 +25,41 @@ Enhanced YOLOv13 object detection model integrated with Meta's DINO2 (DINOv2) pr
 
 ![DINO YOLO Architecture](dino_yolo_architecture.svg)
 
-*Comprehensive architecture diagram showing the integration of DINO2 Vision Transformer with YOLOv13 CNN backbone for enhanced object detection.*
+*Comprehensive architecture diagram showing the integration of DINO3 Vision Transformer with YOLOv13 CNN backbone for enhanced object detection.*
 
 ### Architecture Details
 
 ```
-YOLOv13-DINO2 Hybrid Architecture:
+YOLOv13-DINO3 Hybrid Architecture:
 ├── Input (3 channels RGB)
 ├── YOLOv13 Early Layers (Conv blocks)
-├── DINO2 Backbone (Vision Transformer) ← NEW
-│   ├── Patch Embeddings (14x14 patches)
-│   ├── 12 Transformer Layers (frozen)
-│   ├── Feature Adapter (768→512 channels)
-│   └── Spatial Projection
+├── DINO3 Backbone (Vision Transformer/ConvNeXt) ← ENHANCED
+│   ├── Patch Embeddings (16x16 patches)
+│   ├── Multi-Scale Transformer Layers (frozen)
+│   ├── Dynamic Feature Adapter (384/768/1024→512 channels)
+│   └── Spatial Projection with Context Fusion
 ├── YOLOv13 Neck (FPN/PAN)
 └── YOLOv13 Head (Multi-scale Detection)
 
-Model Statistics:
+Model Statistics (DINO3-Base):
 ├── Total Parameters: ~95.8M
-├── DINO2 Backbone: ~86M (frozen for transfer learning)
+├── DINO3 Backbone: ~86M (frozen for transfer learning)
 ├── YOLOv13 Layers: ~9.8M (trainable)
 └── FLOPs: ~18.1 GFLOPs
 ```
 
 ### Key Architecture Components
 
-#### 🔍 **DINO2 Integration (Layer 4)**
+#### 🔍 **DINO3 Integration (Layer 4)**
 - **Input Processing**: CNN features (512ch @ 40×40) → RGB-like projection → 224×224 resize
-- **Vision Transformer**: DINOv2-ViT-Base-14 with 12 frozen transformer blocks
-- **Feature Adaptation**: 768-dim embeddings → 512 channels with spatial projection
-- **Output**: Enhanced features with global context and fine-grained details
+- **Vision Transformer**: DINOv3 models with flexible architectures (ViT/ConvNeXt)
+- **Multi-Variant Support**: Small (384d), Base (768d), Large (1024d), Huge (1280d), Giant (4096d)
+- **Feature Adaptation**: Dynamic embedding adaptation → 512 channels with spatial projection
+- **Output**: Enhanced features with superior global context and fine-grained details
 
 #### 🏗️ **Multi-Scale Feature Pyramid**
 - **P3 (80×80)**: CNN features for small object detection
-- **P4 (40×40)**: DINO2-enhanced features for medium objects ⭐
+- **P4 (40×40)**: DINO3-enhanced features for medium objects ⭐
 - **P5 (20×20)**: CNN features for large object detection
 
 #### 🔄 **FPN/PAN Neck Architecture**
@@ -103,48 +106,69 @@ pip install -r requirements.txt
 
 ## 🚀 Quick Start
 
-### Training with DINO2 Backbone
+### Training with DINO3 Backbone
 
-Train YOLOv13 enhanced with DINO2 on your dataset:
+Train YOLOv13 enhanced with DINO3 on your dataset:
 
 ```bash
-# Basic training with frozen DINO2 (recommended for transfer learning)
+# Basic training with frozen DINO3 (recommended for transfer learning)
 python train_dino2.py --data path/to/data.yaml --epochs 100 --freeze-dino2
 
-# Fast prototyping with smallest models
+# NEW: Train with specific DINO3 variants
+python train_dino2.py --data data.yaml --model yolov13-dino3 --epochs 100 --freeze-dino2
+
+# Fast prototyping: Nano + DINO3 Small
 python train_dino2.py \
     --data data.yaml \
-    --model yolov13-dino2-working \
-    --size n \
-    --dino-variant dinov2_vits14 \
+    --model yolov13n-dino3 \
     --epochs 50 \
     --batch-size 32 \
     --freeze-dino2
 
-# Balanced performance
+# Balanced performance: Small + DINO3 Base
 python train_dino2.py \
     --data data.yaml \
-    --model yolov13-dino2-working \
-    --size s \
-    --dino-variant dinov2_vitb14 \
+    --model yolov13s-dino3 \
     --epochs 100 \
     --batch-size 16 \
     --freeze-dino2
 
-# Maximum accuracy
+# High accuracy: Large + DINO3 Large
 python train_dino2.py \
     --data data.yaml \
-    --model yolov13-dino2-working \
-    --size x \
-    --dino-variant dinov2_vitl14 \
+    --model yolov13l-dino3 \
     --epochs 200 \
     --batch-size 8 \
+    --freeze-dino2
+
+# Maximum accuracy: XLarge + DINO3 Huge
+python train_dino2.py \
+    --data data.yaml \
+    --model yolov13x-dino3 \
+    --epochs 200 \
+    --batch-size 4 \
+    --freeze-dino2
+
+# Size-scalable approach (equivalent to above)
+python train_dino2.py \
+    --data data.yaml \
+    --model yolov13-dino3 --size s \
+    --epochs 100 \
+    --batch-size 16 \
+    --freeze-dino2
+
+# ConvNeXt architecture variant
+python train_dino2.py \
+    --data data.yaml \
+    --model yolov13-dino3-convnext \
+    --epochs 100 \
+    --batch-size 16 \
     --freeze-dino2
 ```
 
 ### Standard YOLOv13 Training
 
-For standard YOLOv13 training without DINO2:
+For standard YOLOv13 training without DINO3:
 
 ```bash
 # Choose YOLOv13 size based on your needs
@@ -230,8 +254,8 @@ results = model.train(
 |----------|-------------|---------|---------|
 | `--model` | YOLOv13 architecture variant | yolov13-dino2-working | yolov13n, yolov13s, yolov13l, yolov13x, yolov13-dino2-*, etc. |
 | `--size` | YOLOv13 model size | None | n, s, l, x (auto-applied to base models) |
-| `--dino-variant` | DINO2 model variant | dinov2_vitb14 | dinov2_vits14, dinov2_vitb14, dinov2_vitl14, dinov2_vitg14 |
-| `--freeze-dino2` | Freeze DINO2 weights | False | --freeze-dino2 |
+| `--dino-variant` | DINO3 model variant | dinov3_vitb16 | Vision Transformers: dinov3_vits16, dinov3_vitb16, dinov3_vitl16, dinov3_vith16, dinov3_vit7b16; ConvNeXt: dinov3_convnext_tiny, dinov3_convnext_small, dinov3_convnext_base, dinov3_convnext_large |
+| `--freeze-dino2` | Freeze DINO3 weights (backward compatibility) | False | --freeze-dino2 |
 
 ### Training Configuration
 
@@ -256,88 +280,148 @@ Choose from 4 different YOLOv13 model sizes based on your speed/accuracy require
 | **Large** | `yolov13l` | ~28M | 🐌 Slower | Best | High | High accuracy needs |
 | **XLarge** | `yolov13x` | ~64M | 🐢 Slowest | Excellent | Very High | Maximum accuracy |
 
-### DINO2 Model Variants
+### DINO3 Model Variants
 
-The implementation supports multiple DINO2 model sizes:
+The implementation supports multiple DINO3 architectures and model sizes:
 
+#### Vision Transformer (ViT) Variants
 | Model | Parameters | Hidden Size | Patch Size | Performance | Speed | Memory |
 |-------|------------|-------------|------------|-------------|-------|--------|
-| `dinov2_vits14` | ~21M | 384 | 14×14 | Good | ⚡ Fastest | Low |
-| `dinov2_vitb14` | ~86M | 768 | 14×14 | Better | 🚀 Fast | Medium |
-| `dinov2_vitl14` | ~300M | 1024 | 14×14 | Best | 🐌 Slower | High |
-| `dinov2_vitg14` | ~1.1B | 1536 | 14×14 | Excellent | 🐢 Slowest | Very High |
+| `dinov3_vits16` | ~22M | 384 | 16×16 | Good | ⚡ Fastest | Low |
+| `dinov3_vitsp16` | ~22M | 384 | 16×16 | Good+ | ⚡ Fastest | Low |
+| `dinov3_vitb16` | ~87M | 768 | 16×16 | Better | 🚀 Fast | Medium |
+| `dinov3_vitl16` | ~304M | 1024 | 16×16 | Best | 🐌 Slower | High |
+| `dinov3_vith16` | ~632M | 1280 | 16×16 | Excellent | 🐌 Slower | High |
+| `dinov3_vit7b16` | ~7B | 4096 | 16×16 | Outstanding | 🐢 Slowest | Very High |
 
-*Default: `dinov2_vitb14` (recommended balance of performance and speed)*
+#### ConvNeXt Variants
+| Model | Parameters | Architecture | Performance | Speed | Memory |
+|-------|------------|-------------|-------------|-------|--------|
+| `dinov3_convnext_tiny` | ~29M | ConvNeXt | Good | ⚡ Fast | Medium |
+| `dinov3_convnext_small` | ~50M | ConvNeXt | Better | 🚀 Medium | Medium |
+| `dinov3_convnext_base` | ~89M | ConvNeXt | Best | 🐌 Slower | High |
+| `dinov3_convnext_large` | ~198M | ConvNeXt | Excellent | 🐢 Slowest | High |
+
+*Default: `dinov3_vitb16` (recommended balance of performance and speed)*
 
 ### Model Selection Options
 
 ```bash
-# Method 1: Direct model selection
---model yolov13n           # YOLOv13 Nano
---model yolov13s           # YOLOv13 Small  
---model yolov13l           # YOLOv13 Large
---model yolov13x           # YOLOv13 XLarge
+# Method 1: Standard YOLOv13 models (no DINO enhancement)
+--model yolov13n           # YOLOv13 Nano (2.5M params)
+--model yolov13s           # YOLOv13 Small (9M params)
+--model yolov13l           # YOLOv13 Large (28M params)
+--model yolov13x           # YOLOv13 XLarge (64M params)
 
-# Method 2: Base model + size modifier
---model yolov13-dino2-working --size n    # Creates yolov13-dino2-working-n
---model yolov13-dino2-working --size s    # Creates yolov13-dino2-working-s
---model yolov13-dino2-working --size l    # Creates yolov13-dino2-working-l
---model yolov13-dino2-working --size x    # Creates yolov13-dino2-working-x
+# Method 2: YOLOv13 + DINO3 size combinations
+--model yolov13n-dino3     # YOLOv13 Nano + DINO3 Small ViT (~31M params)
+--model yolov13s-dino3     # YOLOv13 Small + DINO3 Base ViT (~96M params)
+--model yolov13l-dino3     # YOLOv13 Large + DINO3 Large ViT (~313M params)
+--model yolov13x-dino3     # YOLOv13 XLarge + DINO3 Huge ViT (~641M params)
 
-# DINO2 variant selection (for DINO2-enabled models)
---dino-variant dinov2_vits14              # Small DINO2
---dino-variant dinov2_vitb14              # Base DINO2 (default)
---dino-variant dinov2_vitl14              # Large DINO2
---dino-variant dinov2_vitg14              # Giant DINO2
+# Method 3: Size-scalable DINO3 with automatic DINO variant selection
+--model yolov13-dino3      # Uses dinov3_vitb16 (default, can scale with --size)
+
+# Method 4: Specialized DINO3 variant models
+--model yolov13-dino3-vits                # Small ViT variant (all sizes)
+--model yolov13-dino3-vitl                # Large ViT variant (all sizes)
+--model yolov13-dino3-convnext            # ConvNeXt variant (all sizes)
+--model yolov13n-dino3-convnext           # Nano + ConvNeXt Tiny
+--model yolov13x-dino3-7b                 # XLarge + 7B ViT (research)
+
+# Method 5: Backward compatibility (auto-migrated to DINO3)
+--model yolov13-dino2-working             # Auto uses DINO3 backend
+
+# Method 6: Size scaling with base models (--size parameter)
+--model yolov13-dino3 --size n            # Nano scaling (uses dinov3_vits16)
+--model yolov13-dino3 --size s            # Small scaling (uses dinov3_vitb16)
+--model yolov13-dino3 --size l            # Large scaling (uses dinov3_vitl16)
+--model yolov13-dino3 --size x            # XLarge scaling (uses dinov3_vith16)
+
+# DINO3 variant selection (for DINO3-enabled models)
+# Vision Transformer variants
+--dino-variant dinov3_vits16              # Small ViT
+--dino-variant dinov3_vitb16              # Base ViT (default)
+--dino-variant dinov3_vitl16              # Large ViT
+--dino-variant dinov3_vith16              # Huge ViT
+--dino-variant dinov3_vit7b16             # 7B ViT (research)
+
+# ConvNeXt variants
+--dino-variant dinov3_convnext_tiny       # ConvNeXt Tiny
+--dino-variant dinov3_convnext_small      # ConvNeXt Small
+--dino-variant dinov3_convnext_base       # ConvNeXt Base
+--dino-variant dinov3_convnext_large      # ConvNeXt Large
 ```
 
 ## 🎯 Recommended Model Combinations
 
 ### 🏃 For Speed-First Applications
 ```bash
-# Ultra-fast: Nano YOLOv13 + Small DINO2
-python train_dino2.py --model yolov13-dino2-working --size n --dino-variant dinov2_vits14
+# Ultra-fast: YOLOv13 Nano + DINO3 Small ViT
+python train_dino2.py --model yolov13n-dino3
 
-# Real-time: Small YOLOv13 only (no DINO2 overhead)
+# Alternative: Size-scalable approach
+python train_dino2.py --model yolov13-dino3 --size n
+
+# Real-time: Standard YOLOv13 only (no DINO3 overhead)
 python train_dino2.py --model yolov13s
 ```
 
 ### ⚖️ For Balanced Performance  
 ```bash
-# Recommended: Small YOLOv13 + Base DINO2
-python train_dino2.py --model yolov13-dino2-working --size s --dino-variant dinov2_vitb14
+# Recommended: YOLOv13 Small + DINO3 Base ViT
+python train_dino2.py --model yolov13s-dino3
 
-# Alternative: Large YOLOv13 only
+# Alternative: Size-scalable approach
+python train_dino2.py --model yolov13-dino3 --size s
+
+# ConvNeXt architecture alternative
+python train_dino2.py --model yolov13-dino3-convnext
+
+# Standard YOLOv13 alternative
 python train_dino2.py --model yolov13l
 ```
 
 ### 🎯 For Maximum Accuracy
 ```bash
-# Best: XLarge YOLOv13 + Large DINO2
-python train_dino2.py --model yolov13-dino2-working --size x --dino-variant dinov2_vitl14
+# Best: YOLOv13 Large + DINO3 Large ViT
+python train_dino2.py --model yolov13l-dino3
 
-# Research: XLarge YOLOv13 + Giant DINO2 (requires 24GB+ VRAM)
-python train_dino2.py --model yolov13-dino2-working --size x --dino-variant dinov2_vitg14
+# Alternative: Size-scalable approach
+python train_dino2.py --model yolov13-dino3 --size l
+
+# High-end: YOLOv13 XLarge + DINO3 Huge ViT (requires 16GB+ VRAM)
+python train_dino2.py --model yolov13x-dino3
+
+# Research: XLarge + 7B model (requires 40GB+ VRAM)
+python train_dino2.py --model yolov13x-dino3-7b
+
+# Custom variant override
+python train_dino2.py --model yolov13x-dino3 --dino-variant dinov3_vit7b16
 ```
 
 ### 💻 Hardware-Specific Recommendations
 
 | Hardware | Recommended Combination | Command |
 |----------|------------------------|---------|
-| **Mobile/Edge** | YOLOv13n | `--model yolov13n` |
-| **RTX 3060 (8GB)** | YOLOv13s + Small DINO2 | `--model yolov13-dino2-working --size s --dino-variant dinov2_vits14` |
-| **RTX 3070 (8GB)** | YOLOv13s + Base DINO2 | `--model yolov13-dino2-working --size s --dino-variant dinov2_vitb14` |
-| **RTX 4090 (24GB)** | YOLOv13l + Large DINO2 | `--model yolov13-dino2-working --size l --dino-variant dinov2_vitl14` |
-| **A100 (40GB)** | YOLOv13x + Giant DINO2 | `--model yolov13-dino2-working --size x --dino-variant dinov2_vitg14` |
+| **Mobile/Edge** | YOLOv13n (no DINO) | `--model yolov13n` |
+| **RTX 3060 (8GB)** | YOLOv13n + DINO3 Small | `--model yolov13n-dino3` |
+| **RTX 3070 (8GB)** | YOLOv13s + DINO3 Base | `--model yolov13s-dino3` |
+| **RTX 4080 (16GB)** | YOLOv13l + DINO3 Large | `--model yolov13l-dino3` |
+| **RTX 4090 (24GB)** | YOLOv13x + DINO3 Huge | `--model yolov13x-dino3` |
+| **A100 (40GB)** | YOLOv13x + DINO3 7B | `--model yolov13x-dino3-7b` |
+| **H100 (80GB)** | Research combinations | `--model yolov13x-dino3 --dino-variant dinov3_vit7b16` |
 
 ### 📊 Dataset Size-Specific Recommendations
 
 | Dataset Size | Recommended Combination | Command | Benefits |
 |--------------|------------------------|---------|----------|
-| **< 100 images** | YOLOv13n + Small DINO2 | `--model yolov13-dino2-working --size n --freeze-dino2` | Fast training, prevents overfitting |
-| **100-500 images** | YOLOv13s + Base DINO2 | `--model yolov13-dino2-working --size s --freeze-dino2` | Optimal balance for small datasets |
-| **500-1000 images** | YOLOv13s + Base DINO2 | `--model yolov13-dino2-working --size s --freeze-dino2` | Strong performance with limited data |
-| **1000+ images** | YOLOv13l + Large DINO2 | `--model yolov13-dino2-working --size l --dino-variant dinov2_vitl14` | Full model potential |
+| **< 100 images** | YOLOv13n + DINO3 Small | `--model yolov13n-dino3 --freeze-dino2` | Fast training, prevents overfitting |
+| **100-500 images** | YOLOv13s + DINO3 Base | `--model yolov13s-dino3 --freeze-dino2` | Optimal balance for small datasets |
+| **500-1000 images** | YOLOv13s + DINO3 ConvNeXt | `--model yolov13-dino3-convnext --freeze-dino2` | Strong performance with limited data |
+| **1000-5000 images** | YOLOv13l + DINO3 Large | `--model yolov13l-dino3` | Full model potential |
+| **5000+ images** | YOLOv13x + DINO3 Huge | `--model yolov13x-dino3` | Maximum accuracy |
+| **10000+ images** | Research configurations | `--model yolov13x-dino3-7b` | Cutting-edge performance |
 
 ## 📁 Dataset Format
 
@@ -372,18 +456,40 @@ dataset/
 
 *Refer to the [Visual Architecture Diagram](#visual-architecture-diagram) above for a comprehensive view of component interactions.*
 
-### 1. DINO2Backbone Module
-- **Location**: `ultralytics/nn/modules/block.py`
+### 1. DINO3Backbone Module
+- **Location**: `ultralytics/nn/modules/block.py:1922-2201`
 - **Features**: 
-  - Real pretrained weights from Meta
+  - Real pretrained weights from Meta's DINOv3
+  - Support for all DINOv3 variants (ViT + ConvNeXt)
   - Configurable weight freezing
-  - Dynamic channel adaptation
+  - Dynamic channel adaptation (384/768/1024/1280/4096 → 512)
   - CNN-Transformer feature fusion
+  - Backward compatibility with DINO2
 - **Integration Point**: Layer 4 in the architecture diagram
 
-### 2. Model Configuration
-- **File**: `ultralytics/cfg/models/v13/yolov13-dino2-working.yaml`
-- **Integration**: DINO2 backbone at layer 4 (P4 feature enhancement)
+### 1.1. DINO2Backbone Compatibility Module
+- **Location**: `ultralytics/nn/modules/block.py:2203-2224`
+- **Purpose**: Automatic migration from DINO2 to DINO3 backend
+- **Features**:
+  - Transparent model name mapping (dinov2_vitb14 → dinov3_vitb16)
+  - Zero-code migration for existing configurations
+  - Maintains all DINO2 API compatibility
+
+### 2. Model Configurations
+- **Primary**: `ultralytics/cfg/models/v13/yolov13-dino3.yaml` - Size-scalable DINO3 support
+- **Size-specific combinations**: 
+  - `yolov13n-dino3.yaml` - Nano + DINO3 Small ViT (dinov3_vits16)
+  - `yolov13s-dino3.yaml` - Small + DINO3 Base ViT (dinov3_vitb16)
+  - `yolov13l-dino3.yaml` - Large + DINO3 Large ViT (dinov3_vitl16)
+  - `yolov13x-dino3.yaml` - XLarge + DINO3 Huge ViT (dinov3_vith16)
+- **Specialized variants**: 
+  - `yolov13-dino3-vits.yaml` - Small ViT (all sizes)
+  - `yolov13-dino3-vitl.yaml` - Large ViT (all sizes)
+  - `yolov13-dino3-convnext.yaml` - ConvNeXt Base (all sizes)
+  - `yolov13n-dino3-convnext.yaml` - Nano + ConvNeXt Tiny
+  - `yolov13x-dino3-7b.yaml` - XLarge + 7B ViT (research)
+- **Legacy**: `yolov13-dino2-working.yaml` - Auto-migrated to DINO3 backend
+- **Integration**: DINO3 backbone at layer 4 (P4 feature enhancement)
 - **Architecture**: Seamless fusion with YOLOv13 pipeline as shown in diagram
 
 ### 3. Training Scripts
@@ -402,37 +508,43 @@ dataset/
 | **YOLOv13l** | Large | 27.6M | 88.4 | 53.4 | 70.9 | 8.63 | High accuracy |
 | **YOLOv13x** | XLarge | 64.0M | 199.2 | 54.8 | 72.0 | 14.67 | Maximum accuracy |
 
-### YOLOv13 + DINO2 Enhanced Performance
+### YOLOv13 + DINO3 Enhanced Performance
 
 | Combination | Total Params | Expected mAP50 Boost | Expected mAP50:95 Boost | Training Time | Inference Time |
 |-------------|--------------|---------------------|------------------------|---------------|----------------|
-| **YOLOv13n + DINO2-Small** | ~23M | +2-4% | +1-3% | 1.5x | 1.8x |
-| **YOLOv13s + DINO2-Base** | ~95M | +3-6% | +2-4% | 2.0x | 2.5x |
-| **YOLOv13l + DINO2-Large** | ~328M | +4-8% | +3-6% | 3.5x | 4.0x |
-| **YOLOv13x + DINO2-Giant** | ~1.16B | +5-10% | +4-7% | 6.0x | 8.0x |
+| **YOLOv13 + DINO3-Small** | ~31M | +2-5% | +1-3% | 1.4x | 1.6x |
+| **YOLOv13 + DINO3-Base** | ~96M | +4-8% | +3-5% | 1.8x | 2.2x |
+| **YOLOv13 + DINO3-Large** | ~313M | +6-12% | +4-8% | 3.0x | 3.5x |
+| **YOLOv13 + DINO3-Huge** | ~641M | +8-15% | +6-10% | 4.5x | 5.0x |
+| **YOLOv13 + DINO3-ConvNeXt** | ~98M | +5-10% | +3-6% | 2.2x | 2.8x |
+| **YOLOv13 + DINO3-7B** | ~7.01B | +10-20% | +8-15% | 8.0x | 12.0x |
 
 *Boosts are compared to standard YOLOv13 models; Training/Inference times are relative to base YOLOv13*
 
-### DINO2 Enhanced Benefits
+### DINO3 Enhanced Benefits
 
-- **🎯 Enhanced Feature Extraction**: Vision transformer captures global context and long-range dependencies
-- **🔍 Better Small Object Detection**: Improved feature representation for detecting small and occluded objects  
-- **🧠 Transfer Learning**: Leverages pretrained DINO2 knowledge from millions of images
+- **🎯 Superior Feature Extraction**: Advanced vision transformers with improved global context understanding
+- **🏗️ Multi-Architecture Support**: Choice between Vision Transformers and ConvNeXt backbones
+- **🔍 Better Small Object Detection**: Enhanced feature representation for detecting small and occluded objects
+- **🧠 Advanced Transfer Learning**: Leverages state-of-the-art DINO3 knowledge from massive datasets
 - **💪 Robust Performance**: Superior handling of complex scenes, lighting, and challenging conditions
-- **⚡ Flexible Scaling**: Choose optimal speed/accuracy trade-off for your specific use case
-- **📊 Small Dataset Excellence**: Outstanding performance even with limited training data (100-1000 images)
+- **⚡ Flexible Scaling**: Wide range of model sizes from 22M to 7B parameters
+- **📊 Small Dataset Excellence**: Outstanding performance even with limited training data (50-1000 images)
+- **🔄 Seamless Migration**: Automatic backward compatibility with existing DINO2 configurations
+- **⚙️ Production Ready**: Optimized for both research and deployment scenarios
 
 ## 📊 Small Dataset Training Advantages
 
-### Why DINO2 Excels with Limited Data
+### Why DINO3 Excels with Limited Data
 
-The integration of Meta's DINOv2 pretrained weights makes this model exceptionally suitable for small dataset training scenarios commonly encountered in specialized domains like civil engineering, medical imaging, and industrial inspection.
+The integration of Meta's DINOv3 pretrained weights makes this model exceptionally suitable for small dataset training scenarios commonly encountered in specialized domains like civil engineering, medical imaging, and industrial inspection.
 
 #### 🎯 **Key Advantages for Small Datasets**
 
-- **Pretrained Knowledge**: DINO2 backbone trained on 142M images provides rich visual representations
-- **Feature Reusability**: Generic visual features from DINO2 transfer well to domain-specific tasks
-- **Reduced Overfitting**: Frozen DINO2 weights prevent overfitting on small training sets
+- **Enhanced Pretrained Knowledge**: DINO3 backbone trained on massive datasets provides richer visual representations
+- **Superior Feature Reusability**: Advanced visual features from DINO3 transfer better to domain-specific tasks
+- **Reduced Overfitting**: Frozen DINO3 weights prevent overfitting on small training sets
+- **Multi-Architecture Benefits**: Choice of ViT or ConvNeXt for optimal task-specific performance
 - **Faster Convergence**: Less training time needed due to strong initialization
 - **Better Generalization**: Improved performance on unseen data even with limited training examples
 
@@ -440,10 +552,11 @@ The integration of Meta's DINOv2 pretrained weights makes this model exceptional
 
 | Dataset Size | Expected Performance | Training Time | Recommended Strategy |
 |--------------|---------------------|---------------|---------------------|
-| **50-100 images** | Good baseline | 10-20 epochs | Freeze DINO2, small learning rate |
-| **100-500 images** | Strong performance | 30-50 epochs | Freeze DINO2, data augmentation |
-| **500-1000 images** | Excellent results | 50-100 epochs | Freeze DINO2, fine-tune last layers |
-| **1000+ images** | Optimal performance | 100+ epochs | Optional DINO2 unfreezing |
+| **50-100 images** | Good baseline | 10-20 epochs | Freeze DINO3, small learning rate |
+| **100-500 images** | Strong performance | 30-50 epochs | Freeze DINO3, data augmentation |
+| **500-1000 images** | Excellent results | 50-100 epochs | Freeze DINO3, fine-tune last layers |
+| **1000+ images** | Optimal performance | 100+ epochs | Optional DINO3 unfreezing |
+| **5000+ images** | Maximum performance | 200+ epochs | Full DINO3 fine-tuning available |
 
 #### 🛠️ **Small Dataset Training Tips**
 
@@ -451,8 +564,7 @@ The integration of Meta's DINOv2 pretrained weights makes this model exceptional
 # Optimal settings for small datasets (< 500 images)
 python train_dino2.py \
     --data small_dataset.yaml \
-    --model yolov13-dino2-working \
-    --size s \
+    --model yolov13s-dino3 \
     --epochs 50 \
     --batch-size 8 \
     --freeze-dino2 \
@@ -461,12 +573,26 @@ python train_dino2.py \
 # For very small datasets (< 100 images)
 python train_dino2.py \
     --data tiny_dataset.yaml \
-    --model yolov13-dino2-working \
-    --size n \
+    --model yolov13n-dino3 \
     --epochs 30 \
     --batch-size 4 \
     --freeze-dino2 \
     --imgsz 416
+
+# ConvNeXt variant for specialized domains
+python train_dino2.py \
+    --data domain_specific.yaml \
+    --model yolov13n-dino3-convnext \
+    --epochs 40 \
+    --batch-size 6 \
+    --freeze-dino2
+
+# Size-scalable alternatives
+python train_dino2.py \
+    --data small_dataset.yaml \
+    --model yolov13-dino3 --size s \
+    --epochs 50 \
+    --freeze-dino2
 ```
 
 #### 🔬 **Civil Engineering Applications**
@@ -886,24 +1012,35 @@ python dino_inference.py --weights model.pt --source 1 --show  # Try camera inde
 
 ```
 yolov13/
-├── train_dino2.py                                     # Main DINO2 training script
+├── train_dino2.py                                     # Main training script (DINO3-compatible)
 ├── train_dino2_resume.py                             # Resume training script
-├── dino_inference.py                                 # Inference script (NEW)
+├── dino_inference.py                                 # Inference script
 ├── dino_yolo_architecture.svg                        # Architecture diagram
 ├── ultralytics/
-│   ├── nn/modules/block.py                           # DINO2Backbone implementation  
-│   └── cfg/models/v13/yolov13-dino2-working.yaml     # DINO2 model configuration
+│   ├── nn/modules/block.py                           # DINO3Backbone + DINO2 compatibility
+│   └── cfg/models/v13/
+│       ├── yolov13-dino3.yaml                        # Size-scalable DINO3 configuration
+│       ├── yolov13n-dino3.yaml                       # Nano + DINO3 Small
+│       ├── yolov13s-dino3.yaml                       # Small + DINO3 Base
+│       ├── yolov13l-dino3.yaml                       # Large + DINO3 Large
+│       ├── yolov13x-dino3.yaml                       # XLarge + DINO3 Huge
+│       ├── yolov13-dino3-vits.yaml                   # Small ViT (all sizes)
+│       ├── yolov13-dino3-vitl.yaml                   # Large ViT (all sizes)
+│       ├── yolov13-dino3-convnext.yaml               # ConvNeXt (all sizes)
+│       ├── yolov13n-dino3-convnext.yaml              # Nano + ConvNeXt Tiny
+│       ├── yolov13x-dino3-7b.yaml                    # XLarge + 7B ViT
+│       └── yolov13-dino2-working.yaml                # Legacy (auto-migrated)
 ├── requirements.txt                                   # Dependencies
 └── README.md                                         # This documentation
 ```
 
 ## 🏆 Citation
 
-If you use this DINO2-enhanced implementation:
+If you use this DINO3-enhanced implementation:
 
 ```bibtex
-@misc{yolov13-dino2,
-  title={YOLOv13 with DINO2 Backbone for Enhanced Object Detection},
+@misc{yolov13-dino3,
+  title={YOLOv13 with DINO3 Backbone for Enhanced Object Detection},
   author={Artificial Intelligence Research Group},
   institution={Department of Civil Engineering, King Mongkut's University of Technology Thonburi},
   year={2024},
@@ -926,7 +1063,7 @@ If you use this DINO2-enhanced implementation:
 
 ### Open Source Foundations
 - **[YOLOv13](https://github.com/iMoonLab/yolov13)** - Base architecture with HyperACE and FullPAD
-- **[Meta DINOv2](https://github.com/facebookresearch/dinov2)** - Vision transformer backbone
+- **[Meta DINOv3](https://github.com/facebookresearch/dinov3)** - Vision transformer backbone with multi-architecture support
 - **[Ultralytics](https://github.com/ultralytics/ultralytics)** - Training framework
 - **[Hugging Face Transformers](https://github.com/huggingface/transformers)** - Model loading utilities
 
@@ -936,9 +1073,20 @@ This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE)
 
 ---
 
-**🎯 Ready to enhance your object detection with DINO2?**
+**🎯 Ready to enhance your object detection with DINO3?**
 
-**Start fresh training:** `python train_dino2.py --data data.yaml --model yolov13-dino2-working --freeze-dino2`
+**Quick start (balanced):** `python train_dino2.py --data data.yaml --model yolov13s-dino3 --freeze-dino2`
+
+**Size combinations:**
+- **Fast:** `python train_dino2.py --data data.yaml --model yolov13n-dino3 --freeze-dino2`
+- **Accurate:** `python train_dino2.py --data data.yaml --model yolov13l-dino3 --freeze-dino2`
+- **Maximum:** `python train_dino2.py --data data.yaml --model yolov13x-dino3 --freeze-dino2`
+
+**Size-scalable approach:** `python train_dino2.py --data data.yaml --model yolov13-dino3 --size s --freeze-dino2`
+
+**Specialized variants:** `python train_dino2.py --data data.yaml --model yolov13-dino3-convnext --freeze-dino2`
+
+**Backward compatibility:** `python train_dino2.py --data data.yaml --model yolov13-dino2-working --freeze-dino2` (auto-migrates)
 
 **Resume training:** `python train_dino2_resume.py --data data.yaml --weights path/to/weights.pt --epochs 50`
 

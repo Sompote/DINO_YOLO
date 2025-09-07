@@ -1,20 +1,23 @@
 nc: 80 # number of classes
-scales: # model compound scaling constants, i.e. 'model=yolov13n.yaml' will call yolov13.yaml with scale 'n'
+scales: # model compound scaling constants, i.e. 'model=yolov13-dino3.yaml' will call yolov13-dino3.yaml with scale 'n'
   # [depth, width, max_channels]
-  n: [0.50, 0.25, 1024]   # Nano
-  s: [0.50, 0.50, 1024]   # Small
-  l: [1.00, 1.00, 512]    # Large
-  x: [1.00, 1.50, 512]    # Extra Large
+  n: [0.50, 0.25, 1024]   # Nano - uses dinov3_vits16
+  s: [0.50, 0.50, 1024]   # Small - uses dinov3_vitb16 
+  l: [1.00, 1.00, 512]    # Large - uses dinov3_vitl16
+  x: [1.00, 1.50, 512]    # Extra Large - uses dinov3_vith16
 
 backbone:
   # [from, repeats, module, args]
-  # Standard CNN layers building up to DINO2 integration point
+  # Standard CNN layers building up to DINO3 integration point
   - [-1, 1, Conv,  [64, 3, 2]] # 0-P1/2
   - [-1, 1, Conv,  [128, 3, 2]] # 1-P2/4
   - [-1, 1, Conv,  [256, 3, 2]] # 2-P3/8
   - [-1, 1, Conv,  [512, 3, 2]] # 3-P4/16
   
-  # DINO3 enhancement - input 512ch, output 512ch
+  # DINO3 enhancement at layer 4 - input 512ch, output 512ch
+  # Available DINO3 variants:
+  # Vision Transformers: dinov3_vits16, dinov3_vitsp16, dinov3_vitb16, dinov3_vitl16, dinov3_vith16, dinov3_vit7b16
+  # ConvNeXt: dinov3_convnext_tiny, dinov3_convnext_small, dinov3_convnext_base, dinov3_convnext_large
   - [-1, 1, DINO3Backbone, ['dinov3_vitb16', True, 512]] # 4: DINO3 enhanced features (512ch)
   
   # Continue processing the 512 channel DINO3-enhanced features
