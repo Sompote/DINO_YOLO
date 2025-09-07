@@ -2008,27 +2008,22 @@ class DINO3Backbone(nn.Module):
             config = Dinov2Config()
             self.dino_model = Dinov2Model(config)
         
-        # Get DINO3 model dimensions
-        # DINO3 models have different architectures, need to infer dimensions
-        if hasattr(self.dino_model, 'embed_dim'):
+        # Get DINO3 model dimensions - use actual model dimensions from loaded HuggingFace model
+        if hasattr(self.dino_model, 'config') and hasattr(self.dino_model.config, 'hidden_size'):
+            self.embed_dim = self.dino_model.config.hidden_size
+        elif hasattr(self.dino_model, 'embed_dim'):
             self.embed_dim = self.dino_model.embed_dim
         elif hasattr(self.dino_model, 'num_features'):
             self.embed_dim = self.dino_model.num_features
         else:
-            # Default embedding dimensions for different model sizes
-            embed_dims = {
-                'dinov3_vits16': 384,
-                'dinov3_vitsp16': 384, 
-                'dinov3_vitb16': 768,
-                'dinov3_vitl16': 1024,
-                'dinov3_vith16': 1280,
-                'dinov3_vit7b16': 4096,
-                'dinov3_convnext_tiny': 768,   # Using DINOv2-base backend (768)
-                'dinov3_convnext_small': 768,  # Using DINOv2-base backend (768)
-                'dinov3_convnext_base': 768,   # Using DINOv2-base backend (768)
-                'dinov3_convnext_large': 1024  # Using DINOv2-large backend (1024)
+            # Fallback: Use actual HuggingFace model dimensions based on loaded model
+            hf_embed_dims = {
+                'facebook/dinov2-small': 384,
+                'facebook/dinov2-base': 768,
+                'facebook/dinov2-large': 1024
             }
-            self.embed_dim = embed_dims.get(hf_model_name, 768)
+            self.embed_dim = hf_embed_dims.get(hf_fallback_name, 768)
+            print(f"⚠️  Using fallback embed_dim {self.embed_dim} for {hf_fallback_name}")
         
         self.patch_size = 16  # DINOv3 uses patch size 16
         

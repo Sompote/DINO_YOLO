@@ -1,6 +1,5 @@
-# YOLOv13x with DINO3 7B - Extra Large variant with 7B Vision Transformer (Research/High-end deployment)
-# Usage: YOLO('yolov13x-dino3-7b.yaml')
-# Requirements: 40GB+ VRAM, High-performance computing environment
+# YOLOv13x with DINO3 - Extra Large variant for maximum accuracy with enhanced features
+# Usage: YOLO('yolov13-dino3-x.yaml')
 
 nc: 80 # number of classes
 scales: # model compound scaling constants
@@ -9,11 +8,16 @@ scales: # model compound scaling constants
 
 backbone:
   # [from, repeats, module, args]
+  # Standard CNN layers building up to DINO3 integration point
   - [-1, 1, Conv,  [64, 3, 2]] # 0-P1/2
   - [-1, 1, Conv,  [128, 3, 2, 1, 2]] # 1-P2/4
   - [-1, 2, DSC3k2,  [256, False, 0.25]]
   - [-1, 1, Conv,  [256, 3, 2, 1, 4]] # 3-P3/8
-  - [-1, 1, DINO3Backbone, ['dinov3_vitl16', True, 512]] # 4: DINO3 Large ViT (compatible with available model)
+  
+  # DINO3 enhancement at layer 4 - optimized for Extra Large size
+  - [-1, 1, DINO3Backbone, ['dinov3_vith16', True, 512]] # 4: DINO3 Huge ViT for maximum accuracy
+  
+  # Continue YOLOv13x architecture with DINO3-enhanced features
   - [-1, 1, DSConv,  [512, 3, 2]] # 5-P4/16
   - [-1, 4, A2C2f, [512, True, 4]]
   - [-1, 1, DSConv,  [1024, 3, 2]] # 7-P5/32
