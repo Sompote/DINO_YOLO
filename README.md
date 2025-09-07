@@ -149,12 +149,20 @@ python train_dino2.py \
     --batch-size 4 \
     --freeze-dino2
 
-# Size-scalable approach (equivalent to above)
+# Size-scalable approaches (multiple options)
 python train_dino2.py \
     --data data.yaml \
     --model yolov13-dino3 --size s \
     --epochs 100 \
     --batch-size 16 \
+    --freeze-dino2
+
+# Or use direct scalable models
+python train_dino2.py \
+    --data data.yaml \
+    --model yolov13-dino3-l \
+    --epochs 200 \
+    --batch-size 8 \
     --freeze-dino2
 
 # ConvNeXt architecture variant
@@ -252,7 +260,7 @@ results = model.train(
 
 | Argument | Description | Default | Options |
 |----------|-------------|---------|---------|
-| `--model` | YOLOv13 architecture variant | yolov13-dino2-working | yolov13n, yolov13s, yolov13l, yolov13x, yolov13-dino2-*, etc. |
+| `--model` | YOLOv13 architecture variant | yolov13s-dino3 | Standard: yolov13n/s/l/x; DINO3: yolov13n/s/l/x-dino3, yolov13-dino3(-x/-l/-vits/-vitl/-convnext), yolov13n-dino3-convnext, yolov13x-dino3-7b; Legacy: yolov13-dino2-* |
 | `--size` | YOLOv13 model size | None | n, s, l, x (auto-applied to base models) |
 | `--dino-variant` | DINO3 model variant | dinov3_vitb16 | Vision Transformers: dinov3_vits16, dinov3_vitb16, dinov3_vitl16, dinov3_vith16, dinov3_vit7b16; ConvNeXt: dinov3_convnext_tiny, dinov3_convnext_small, dinov3_convnext_base, dinov3_convnext_large |
 | `--freeze-dino2` | Freeze DINO3 weights (backward compatibility) | False | --freeze-dino2 |
@@ -321,16 +329,24 @@ The implementation supports multiple DINO3 architectures and model sizes:
 
 # Method 3: Size-scalable DINO3 with automatic DINO variant selection
 --model yolov13-dino3      # Uses dinov3_vitb16 (default, can scale with --size)
+--model yolov13-dino3-x    # Size-scalable XLarge with DINO3
+--model yolov13-dino3-l    # Size-scalable Large with DINO3
 
 # Method 4: Specialized DINO3 variant models
 --model yolov13-dino3-vits                # Small ViT variant (all sizes)
 --model yolov13-dino3-vitl                # Large ViT variant (all sizes)
 --model yolov13-dino3-convnext            # ConvNeXt variant (all sizes)
 --model yolov13n-dino3-convnext           # Nano + ConvNeXt Tiny
---model yolov13x-dino3-7b                 # XLarge + 7B ViT (research)
+--model yolov13x-dino3-7b                 # XLarge + Compatible Large ViT (fixed)
 
 # Method 5: Backward compatibility (auto-migrated to DINO3)
 --model yolov13-dino2-working             # Auto uses DINO3 backend
+--model yolov13-dino2-working-n           # Nano size variant (legacy)
+--model yolov13-dino2-working-s           # Small size variant (legacy)
+--model yolov13-dino2-working-l           # Large size variant (legacy)
+--model yolov13-dino2-working-x           # XLarge size variant (legacy)
+--model yolov13-dino2-simple              # Simple DINO2 variant (legacy)
+--model yolov13-dino2-fixed               # Fixed DINO2 variant (legacy)
 
 # Method 6: Size scaling with base models (--size parameter)
 --model yolov13-dino3 --size n            # Nano scaling (uses dinov3_vits16)
@@ -1020,6 +1036,8 @@ yolov13/
 │   ├── nn/modules/block.py                           # DINO3Backbone + DINO2 compatibility
 │   └── cfg/models/v13/
 │       ├── yolov13-dino3.yaml                        # Size-scalable DINO3 configuration
+│       ├── yolov13-dino3-x.yaml                      # Size-scalable XLarge with DINO3
+│       ├── yolov13-dino3-l.yaml                      # Size-scalable Large with DINO3
 │       ├── yolov13n-dino3.yaml                       # Nano + DINO3 Small
 │       ├── yolov13s-dino3.yaml                       # Small + DINO3 Base
 │       ├── yolov13l-dino3.yaml                       # Large + DINO3 Large
@@ -1028,8 +1046,15 @@ yolov13/
 │       ├── yolov13-dino3-vitl.yaml                   # Large ViT (all sizes)
 │       ├── yolov13-dino3-convnext.yaml               # ConvNeXt (all sizes)
 │       ├── yolov13n-dino3-convnext.yaml              # Nano + ConvNeXt Tiny
-│       ├── yolov13x-dino3-7b.yaml                    # XLarge + 7B ViT
-│       └── yolov13-dino2-working.yaml                # Legacy (auto-migrated)
+│       ├── yolov13x-dino3-7b.yaml                    # XLarge + Compatible Large ViT (fixed)
+│       ├── yolov13-dino2-working.yaml                # Legacy (auto-migrated)
+│       ├── yolov13-dino2-working-n.yaml              # Legacy Nano variant
+│       ├── yolov13-dino2-working-s.yaml              # Legacy Small variant
+│       ├── yolov13-dino2-working-l.yaml              # Legacy Large variant
+│       ├── yolov13-dino2-working-x.yaml              # Legacy XLarge variant
+│       ├── yolov13-dino2-simple.yaml                 # Legacy simple variant
+│       ├── yolov13-dino2-fixed.yaml                  # Legacy fixed variant
+│       └── Standard YOLOv13: yolov13n/s/l/x.yaml     # Base models
 ├── requirements.txt                                   # Dependencies
 └── README.md                                         # This documentation
 ```

@@ -81,11 +81,13 @@ def main():
                            'yolov13n-dino3', 'yolov13s-dino3', 'yolov13l-dino3', 'yolov13x-dino3',
                            # DINO3 scalable and variants
                            'yolov13-dino3', 'yolov13-dino3-vits', 'yolov13-dino3-vitl', 'yolov13-dino3-convnext',
+                           'yolov13-dino3-x', 'yolov13-dino3-l',  # Size-scalable alternatives
                            # DINO3 specialized
                            'yolov13n-dino3-convnext', 'yolov13x-dino3-7b',
                            # DINO2 compatibility (legacy)
-                           'yolov13-dino2', 'yolov13-dino2-simple', 
-                           'yolov13-dino2-working', 'yolov13-dino2-fixed'
+                           'yolov13-dino2', 'yolov13-dino2-simple', 'yolov13-dino2-fixed',
+                           'yolov13-dino2-working', 'yolov13-dino2-working-n', 'yolov13-dino2-working-s',
+                           'yolov13-dino2-working-l', 'yolov13-dino2-working-x'
                        ],
                        help='YOLOv13 model variant')
     parser.add_argument('--size', type=str, default=None,
