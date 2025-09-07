@@ -262,7 +262,7 @@ results = model.train(
 |----------|-------------|---------|---------|
 | `--model` | YOLOv13 architecture variant | yolov13s-dino3 | Standard: yolov13n/s/l/x; DINO3: yolov13n/s/l/x-dino3, yolov13-dino3(-x/-l/-vits/-vitl/-convnext), yolov13n-dino3-convnext, yolov13x-dino3-7b; Legacy: yolov13-dino2-* |
 | `--size` | YOLOv13 model size | None | n, s, l, x (auto-applied to base models) |
-| `--dino-variant` | DINO3 model variant | dinov3_vitb16 | Vision Transformers: dinov3_vits16, dinov3_vitb16, dinov3_vitl16, dinov3_vith16, dinov3_vit7b16; ConvNeXt: dinov3_convnext_tiny, dinov3_convnext_small, dinov3_convnext_base, dinov3_convnext_large |
+| `--dino-variant` | DINO3 model variant (overrides YAML defaults) | dinov3_vitb16 | Vision Transformers: dinov3_vits16, dinov3_vitb16, dinov3_vitl16, dinov3_vith16, dinov3_vit7b16; ConvNeXt: dinov3_convnext_tiny, dinov3_convnext_small, dinov3_convnext_base, dinov3_convnext_large; Legacy: dinov2_vits14, dinov2_vitb14, dinov2_vitl14, dinov2_vitg14 |
 | `--freeze-dino2` | Freeze DINO3 weights (backward compatibility) | False | --freeze-dino2 |
 
 ### Training Configuration
@@ -354,19 +354,26 @@ The implementation supports multiple DINO3 architectures and model sizes:
 --model yolov13-dino3 --size l            # Large scaling (uses dinov3_vitl16)
 --model yolov13-dino3 --size x            # XLarge scaling (uses dinov3_vith16)
 
-# DINO3 variant selection (for DINO3-enabled models)
-# Vision Transformer variants
---dino-variant dinov3_vits16              # Small ViT
---dino-variant dinov3_vitb16              # Base ViT (default)
---dino-variant dinov3_vitl16              # Large ViT
---dino-variant dinov3_vith16              # Huge ViT
---dino-variant dinov3_vit7b16             # 7B ViT (research)
+# DINO3 variant selection (overrides YAML defaults for ANY DINO3-enabled model)
+# Vision Transformer variants - can be used with ANY model containing DINO3
+--dino-variant dinov3_vits16              # Small ViT - works with all DINO3 models
+--dino-variant dinov3_vitb16              # Base ViT (default) - works with all DINO3 models
+--dino-variant dinov3_vitl16              # Large ViT - works with all DINO3 models
+--dino-variant dinov3_vith16              # Huge ViT - works with all DINO3 models
+--dino-variant dinov3_vit7b16             # 7B ViT (research) - works with all DINO3 models
 
-# ConvNeXt variants
---dino-variant dinov3_convnext_tiny       # ConvNeXt Tiny
---dino-variant dinov3_convnext_small      # ConvNeXt Small
---dino-variant dinov3_convnext_base       # ConvNeXt Base
---dino-variant dinov3_convnext_large      # ConvNeXt Large
+# ConvNeXt variants - can be used with ANY model containing DINO3
+--dino-variant dinov3_convnext_tiny       # ConvNeXt Tiny - works with all DINO3 models
+--dino-variant dinov3_convnext_small      # ConvNeXt Small - works with all DINO3 models
+--dino-variant dinov3_convnext_base       # ConvNeXt Base - works with all DINO3 models
+--dino-variant dinov3_convnext_large      # ConvNeXt Large - works with all DINO3 models
+
+# Examples of overriding YAML defaults:
+# yolov13n-dino3.yaml uses dinov3_vits16 by default, but you can override:
+python train_dino2.py --model yolov13n-dino3 --dino-variant dinov3_vitl16  # Use Large ViT instead
+
+# yolov13s-dino3.yaml uses dinov3_vitb16 by default, but you can override:
+python train_dino2.py --model yolov13s-dino3 --dino-variant dinov3_vith16   # Use Huge ViT instead
 ```
 
 ## 🎯 Recommended Model Combinations
@@ -412,8 +419,11 @@ python train_dino2.py --model yolov13x-dino3
 # Research: XLarge + 7B model (requires 40GB+ VRAM)
 python train_dino2.py --model yolov13x-dino3-7b
 
-# Custom variant override
-python train_dino2.py --model yolov13x-dino3 --dino-variant dinov3_vit7b16
+# Custom variant override examples
+python train_dino2.py --model yolov13x-dino3 --dino-variant dinov3_vit7b16      # Use 7B ViT with XLarge
+python train_dino2.py --model yolov13n-dino3 --dino-variant dinov3_vitl16       # Use Large ViT with Nano
+python train_dino2.py --model yolov13s-dino3 --dino-variant dinov3_convnext_large  # Use ConvNeXt with Small
+python train_dino2.py --model yolov13-dino3-convnext --dino-variant dinov3_vith16   # Override ConvNeXt model with ViT
 ```
 
 ### 💻 Hardware-Specific Recommendations
