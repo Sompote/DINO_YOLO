@@ -118,7 +118,7 @@ def main():
         # Apply size variant to base models
         scalable_models = [
             'yolov13', 
-            'yolov13-dino3', 
+            'yolov13-dino3', 'yolov13-dino3-x', 'yolov13-dino3-l',
             'yolov13-dino3-vits', 'yolov13-dino3-vitl', 'yolov13-dino3-convnext',
             'yolov13-dino2', 'yolov13-dino2-simple', 
             'yolov13-dino2-working', 'yolov13-dino2-fixed'
