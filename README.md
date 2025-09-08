@@ -133,7 +133,7 @@ python train_dino2.py \
     --batch-size 16 \
     --freeze-dino2
 
-# High accuracy: Large + DINO3 Large
+# High accuracy: Large + DINO3 Large ✅ RECOMMENDED
 python train_dino2.py \
     --data data.yaml \
     --model yolov13l-dino3 \
@@ -141,7 +141,7 @@ python train_dino2.py \
     --batch-size 8 \
     --freeze-dino2
 
-# Maximum accuracy: XLarge + DINO3 Huge
+# Maximum accuracy: XLarge + DINO3 Huge ✅ RECOMMENDED  
 python train_dino2.py \
     --data data.yaml \
     --model yolov13x-dino3 \
@@ -157,10 +157,10 @@ python train_dino2.py \
     --batch-size 16 \
     --freeze-dino2
 
-# Or use direct scalable models
+# Or use the recommended working models
 python train_dino2.py \
     --data data.yaml \
-    --model yolov13-dino3-l \
+    --model yolov13l-dino3 \
     --epochs 200 \
     --batch-size 8 \
     --freeze-dino2
@@ -314,23 +314,25 @@ The implementation supports multiple DINO3 architectures and model sizes:
 
 ### Model Selection Options
 
+⚠️ **Important**: Use the RECOMMENDED models below to avoid channel dimension issues.
+
 ```bash
 # Method 1: Standard YOLOv13 models (no DINO enhancement)
---model yolov13n           # YOLOv13 Nano (2.5M params)
---model yolov13s           # YOLOv13 Small (9M params)
---model yolov13l           # YOLOv13 Large (28M params)
---model yolov13x           # YOLOv13 XLarge (64M params)
+--model yolov13n           # YOLOv13 Nano (2.5M params) ✅
+--model yolov13s           # YOLOv13 Small (9M params) ✅
+--model yolov13l           # YOLOv13 Large (28M params) ✅
+--model yolov13x           # YOLOv13 XLarge (64M params) ✅
 
-# Method 2: YOLOv13 + DINO3 size combinations
---model yolov13n-dino3     # YOLOv13 Nano + DINO3 Small ViT (~31M params)
---model yolov13s-dino3     # YOLOv13 Small + DINO3 Base ViT (~96M params)
---model yolov13l-dino3     # YOLOv13 Large + DINO3 Large ViT (~313M params)
---model yolov13x-dino3     # YOLOv13 XLarge + DINO3 Huge ViT (~641M params)
+# Method 2: YOLOv13 + DINO3 size combinations (RECOMMENDED - tested and working)
+--model yolov13n-dino3     # YOLOv13 Nano + DINO3 Small ViT (~31M params) ✅
+--model yolov13s-dino3     # YOLOv13 Small + DINO3 Base ViT (~96M params) ✅  
+--model yolov13l-dino3     # YOLOv13 Large + DINO3 Large ViT (~313M params) ✅
+--model yolov13x-dino3     # YOLOv13 XLarge + DINO3 Huge ViT (~641M params) ✅
 
 # Method 3: Size-scalable DINO3 with automatic DINO variant selection
---model yolov13-dino3      # Uses dinov3_vitb16 (default, can scale with --size)
---model yolov13-dino3-x    # Size-scalable XLarge with DINO3
---model yolov13-dino3-l    # Size-scalable Large with DINO3
+--model yolov13-dino3      # Uses dinov3_vitb16 (default, can scale with --size) ✅
+--model yolov13-dino3-x    # Size-scalable XLarge with DINO3 ⚠️ (use yolov13x-dino3 instead)
+--model yolov13-dino3-l    # Size-scalable Large with DINO3 ⚠️ (use yolov13l-dino3 instead)
 
 # Method 4: Specialized DINO3 variant models
 --model yolov13-dino3-vits                # Small ViT variant (all sizes)
@@ -431,10 +433,10 @@ python train_dino2.py --model yolov13-dino3-convnext --dino-variant dinov3_vith1
 | Hardware | Recommended Combination | Command |
 |----------|------------------------|---------|
 | **Mobile/Edge** | YOLOv13n (no DINO) | `--model yolov13n` |
-| **RTX 3060 (8GB)** | YOLOv13n + DINO3 Small | `--model yolov13n-dino3` |
-| **RTX 3070 (8GB)** | YOLOv13s + DINO3 Base | `--model yolov13s-dino3` |
-| **RTX 4080 (16GB)** | YOLOv13l + DINO3 Large | `--model yolov13l-dino3` |
-| **RTX 4090 (24GB)** | YOLOv13x + DINO3 Huge | `--model yolov13x-dino3` |
+| **RTX 3060 (8GB)** | YOLOv13n + DINO3 Small | `--model yolov13n-dino3` ✅ |
+| **RTX 3070 (8GB)** | YOLOv13s + DINO3 Base | `--model yolov13s-dino3` ✅ |
+| **RTX 4080 (16GB)** | YOLOv13l + DINO3 Large | `--model yolov13l-dino3` ✅ |
+| **RTX 4090 (24GB)** | YOLOv13x + DINO3 Huge | `--model yolov13x-dino3` ✅ |
 | **A100 (40GB)** | YOLOv13x + DINO3 7B | `--model yolov13x-dino3-7b` |
 | **H100 (80GB)** | Research combinations | `--model yolov13x-dino3 --dino-variant dinov3_vit7b16` |
 
@@ -914,6 +916,25 @@ estimator = PyTorch(
 
 ## 🛠️ Troubleshooting
 
+### Model Configuration Issues
+
+#### Channel Dimension Mismatches
+```bash
+# ❌ If you get "expected input[1, 1280, 16, 16] to have 1536 channels" error:
+# DON'T USE: --model yolov13-dino3-l
+# ✅ USE INSTEAD: --model yolov13l-dino3
+
+# ❌ If you get channel mismatch with XLarge variants:
+# DON'T USE: --model yolov13-dino3-x  
+# ✅ USE INSTEAD: --model yolov13x-dino3
+
+# ✅ RECOMMENDED working model combinations:
+python train_dino2.py --data data.yaml --model yolov13n-dino3 --freeze-dino2  # Nano
+python train_dino2.py --data data.yaml --model yolov13s-dino3 --freeze-dino2  # Small
+python train_dino2.py --data data.yaml --model yolov13l-dino3 --freeze-dino2  # Large
+python train_dino2.py --data data.yaml --model yolov13x-dino3 --freeze-dino2  # XLarge
+```
+
 ### Memory Issues
 ```bash
 # Reduce batch size
@@ -1110,19 +1131,19 @@ This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE)
 
 **🎯 Ready to enhance your object detection with DINO3?**
 
-**Quick start (balanced):** `python train_dino2.py --data data.yaml --model yolov13s-dino3 --freeze-dino2`
+**Quick start (balanced):** `python train_dino2.py --data data.yaml --model yolov13s-dino3 --freeze-dino2` ✅
 
-**Size combinations:**
-- **Fast:** `python train_dino2.py --data data.yaml --model yolov13n-dino3 --freeze-dino2`
-- **Accurate:** `python train_dino2.py --data data.yaml --model yolov13l-dino3 --freeze-dino2`
-- **Maximum:** `python train_dino2.py --data data.yaml --model yolov13x-dino3 --freeze-dino2`
+**Size combinations (RECOMMENDED):**
+- **Fast:** `python train_dino2.py --data data.yaml --model yolov13n-dino3 --freeze-dino2` ✅
+- **Accurate:** `python train_dino2.py --data data.yaml --model yolov13l-dino3 --freeze-dino2` ✅
+- **Maximum:** `python train_dino2.py --data data.yaml --model yolov13x-dino3 --freeze-dino2` ✅
 
-**Size-scalable approach:** `python train_dino2.py --data data.yaml --model yolov13-dino3 --size s --freeze-dino2`
+**Size-scalable approach:** `python train_dino2.py --data data.yaml --model yolov13-dino3 --size s --freeze-dino2` ✅
 
-**Specialized variants:** `python train_dino2.py --data data.yaml --model yolov13-dino3-convnext --freeze-dino2`
+**Specialized variants:** `python train_dino2.py --data data.yaml --model yolov13-dino3-convnext --freeze-dino2` ✅
 
-**Backward compatibility:** `python train_dino2.py --data data.yaml --model yolov13-dino2-working --freeze-dino2` (auto-migrates)
+**Backward compatibility:** `python train_dino2.py --data data.yaml --model yolov13-dino2-working --freeze-dino2` ✅ (auto-migrates)
 
-**Resume training:** `python train_dino2_resume.py --data data.yaml --weights path/to/weights.pt --epochs 50`
+**Resume training:** `python train_dino2_resume.py --data data.yaml --weights path/to/weights.pt --epochs 50` ✅
 
-**Run inference:** `python dino_inference.py --weights best.pt --source image.jpg --conf 0.5`
+**Run inference:** `python dino_inference.py --weights best.pt --source image.jpg --conf 0.5` ✅
